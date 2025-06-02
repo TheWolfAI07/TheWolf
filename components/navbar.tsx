@@ -1,11 +1,19 @@
 "use client"
 
 import Link from "next/link"
-import { usePathname, useRouter } from "next/navigation"
-import { User, LogOut } from "lucide-react"
+import { usePathname } from "next/navigation"
+import { User, LogOut, Settings, Loader2, Shield } from "lucide-react"
 import { Button } from "@/components/ui/button"
-import { useState, useEffect } from "react"
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
+import { useAuthContext } from "@/components/auth/auth-provider"
+import { useAdmin } from "@/hooks/useAdmin"
 
 const links = [
   { href: "/dashboard/wolf-grid", label: "Home" },
@@ -18,23 +26,26 @@ const links = [
 
 export function Navbar() {
   const pathname = usePathname()
-  const router = useRouter()
-  const [isSignedIn, setIsSignedIn] = useState(false)
+  const { user, signOut, loading, isAuthenticated } = useAuthContext()
+  const { isAdmin, adminRole } = useAdmin()
 
-  // Check if user is signed in on component mount
-  useEffect(() => {
-    const signedIn = localStorage.getItem("wolf-signed-in") === "true"
-    setIsSignedIn(signedIn)
-  }, [])
-
-  const handleSignIn = () => {
-    router.push("/auth/signin")
+  const handleSignOut = async () => {
+    await signOut()
   }
 
-  const handleSignOut = () => {
-    localStorage.removeItem("wolf-signed-in")
-    setIsSignedIn(false)
-    router.push("/")
+  const getUserInitials = (name?: string, email?: string) => {
+    if (name) {
+      return name
+        .split(" ")
+        .map((n) => n[0])
+        .join("")
+        .toUpperCase()
+        .slice(0, 2)
+    }
+    if (email) {
+      return email[0].toUpperCase()
+    }
+    return "U"
   }
 
   return (
@@ -44,8 +55,8 @@ export function Navbar() {
           Wolf
         </Link>
 
-        {isSignedIn && (
-          <div className="flex space-x-6">
+        {isAuthenticated && (
+          <div className="hidden md:flex space-x-6">
             {links.map((link) => (
               <Link
                 key={link.href}
@@ -59,26 +70,70 @@ export function Navbar() {
                 {link.label}
               </Link>
             ))}
+            {isAdmin && (
+              <Link
+                href="/admin"
+                className={
+                  pathname === "/admin"
+                    ? "text-turquoise border-b-2 border-pink"
+                    : "text-gray-400 hover:text-turquoise transition-colors"
+                }
+              >
+                Admin
+              </Link>
+            )}
           </div>
         )}
 
         <div>
-          {isSignedIn ? (
+          {loading ? (
+            <Loader2 className="w-6 h-6 animate-spin text-gray-400" />
+          ) : isAuthenticated && user ? (
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="bg-turquoise/20 border-turquoise/30 text-turquoise hover:bg-turquoise/30"
-                >
-                  <User className="w-4 h-4 mr-2" />
-                  Profile
+                <Button variant="ghost" className="relative h-10 w-10 rounded-full">
+                  <Avatar className="h-10 w-10">
+                    <AvatarImage src={user.avatar_url || undefined} alt={user.full_name || user.email} />
+                    <AvatarFallback className="bg-turquoise text-black font-semibold">
+                      {getUserInitials(user.full_name, user.email)}
+                    </AvatarFallback>
+                  </Avatar>
                 </Button>
               </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="bg-gunmetal border-gray-700">
+              <DropdownMenuContent align="end" className="bg-gunmetal border-gray-700 w-56">
+                <div className="flex items-center justify-start gap-2 p-2">
+                  <div className="flex flex-col space-y-1 leading-none">
+                    {user.full_name && <p className="font-medium text-turquoise">{user.full_name}</p>}
+                    <p className="w-[200px] truncate text-sm text-gray-400">{user.email}</p>
+                    {isAdmin && (
+                      <p className="text-xs text-pink font-medium">{adminRole?.replace("_", " ").toUpperCase()}</p>
+                    )}
+                  </div>
+                </div>
+                <DropdownMenuSeparator className="bg-gray-700" />
+                <DropdownMenuItem
+                  asChild
+                  className="text-gray-300 hover:text-turquoise hover:bg-gray-700 cursor-pointer"
+                >
+                  <Link href="/settings">
+                    <Settings className="w-4 h-4 mr-2" />
+                    Settings
+                  </Link>
+                </DropdownMenuItem>
+                {isAdmin && (
+                  <DropdownMenuItem
+                    asChild
+                    className="text-gray-300 hover:text-turquoise hover:bg-gray-700 cursor-pointer"
+                  >
+                    <Link href="/admin">
+                      <Shield className="w-4 h-4 mr-2" />
+                      Admin Panel
+                    </Link>
+                  </DropdownMenuItem>
+                )}
                 <DropdownMenuItem
                   onClick={handleSignOut}
-                  className="text-gray-300 hover:text-turquoise hover:bg-gray-700 cursor-pointer"
+                  className="text-gray-300 hover:text-red-400 hover:bg-gray-700 cursor-pointer"
                 >
                   <LogOut className="w-4 h-4 mr-2" />
                   Sign Out
@@ -86,15 +141,26 @@ export function Navbar() {
               </DropdownMenuContent>
             </DropdownMenu>
           ) : (
-            <Button
-              onClick={handleSignIn}
-              variant="outline"
-              size="sm"
-              className="bg-gray-600/20 border-gray-500/30 text-gray-300 hover:bg-gray-500/30"
-            >
-              <User className="w-4 h-4 mr-2" />
-              Sign In
-            </Button>
+            <div className="flex space-x-2">
+              <Button
+                asChild
+                variant="outline"
+                size="sm"
+                className="border-gray-500/30 text-gray-300 hover:bg-gray-500/30"
+              >
+                <Link href="/auth/signin">
+                  <User className="w-4 h-4 mr-2" />
+                  Sign In
+                </Link>
+              </Button>
+              <Button
+                asChild
+                size="sm"
+                className="bg-turquoise text-black font-semibold hover:bg-pink transition-colors"
+              >
+                <Link href="/auth/signup">Sign Up</Link>
+              </Button>
+            </div>
           )}
         </div>
       </div>
@@ -102,5 +168,4 @@ export function Navbar() {
   )
 }
 
-// Also export as default for compatibility
 export default Navbar
