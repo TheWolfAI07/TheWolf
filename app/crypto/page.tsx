@@ -1,0 +1,752 @@
+"use client"
+
+import { useState, useEffect } from "react"
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { Button } from "@/components/ui/button"
+import { Badge } from "@/components/ui/badge"
+import { Input } from "@/components/ui/input"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { Progress } from "@/components/ui/progress"
+import {
+  Wallet,
+  TrendingUp,
+  TrendingDown,
+  ArrowUpRight,
+  ArrowDownRight,
+  RefreshCw,
+  Settings,
+  Eye,
+  EyeOff,
+  Copy,
+  ExternalLink,
+  Plus,
+  Filter,
+  Search,
+  BarChart3,
+  PieChart,
+  Activity,
+} from "lucide-react"
+
+import { useAccount, useBalance, useDisconnect, useChainId } from "wagmi"
+import { useWeb3Modal } from "@web3modal/wagmi/react"
+import { getTokenBalances, getChainName, truncateAddress, TOKEN_ADDRESSES } from "@/lib/wallet-utils"
+
+interface WalletData {
+  id: string
+  name: string
+  network: string
+  address: string
+  balance: number
+  usdValue: number
+  change24h: number
+  tokens: TokenBalance[]
+  connected: boolean
+}
+
+interface TokenBalance {
+  symbol: string
+  name: string
+  balance: number
+  usdValue: number
+  change24h: number
+  logo: string
+}
+
+interface Transaction {
+  id: string
+  hash: string
+  type: "send" | "receive" | "swap" | "stake"
+  asset: string
+  amount: number
+  usdValue: number
+  status: "pending" | "confirmed" | "failed"
+  timestamp: string
+  from: string
+  to: string
+  gasUsed?: number
+}
+
+export default function CryptoDashboard() {
+  const [wallets, setWallets] = useState<WalletData[]>([])
+  const [transactions, setTransactions] = useState<Transaction[]>([])
+  const [selectedWallet, setSelectedWallet] = useState<string>("all")
+  const [showBalances, setShowBalances] = useState(true)
+  const [loading, setLoading] = useState(true)
+  const [searchTerm, setSearchTerm] = useState("")
+  const [filterStatus, setFilterStatus] = useState("all")
+  const [walletError, setWalletError] = useState<string | null>(null)
+
+  const { address, isConnected } = useAccount()
+  const { open } = useWeb3Modal()
+  const { disconnect } = useDisconnect()
+  const chainId = useChainId()
+
+  const { data: nativeBalance } = useBalance({
+    address: address,
+  })
+
+  // Mock transactions for demo
+  useEffect(() => {
+    const mockTransactions: Transaction[] = [
+      {
+        id: "1",
+        hash: "0x1234...5678",
+        type: "receive",
+        asset: "ETH",
+        amount: 0.5,
+        usdValue: 1250,
+        status: "confirmed",
+        timestamp: new Date(Date.now() - 3600000).toISOString(),
+        from: "0xabcd...efgh",
+        to: address || "0x0000...0000",
+      },
+      {
+        id: "2",
+        hash: "0x5678...9abc",
+        type: "send",
+        asset: "USDC",
+        amount: 100,
+        usdValue: 100,
+        status: "confirmed",
+        timestamp: new Date(Date.now() - 7200000).toISOString(),
+        from: address || "0x0000...0000",
+        to: "0xdef0...1234",
+      },
+    ]
+    setTransactions(mockTransactions)
+  }, [address])
+
+  // Fetch wallet data
+  useEffect(() => {
+    const fetchWalletData = async () => {
+      if (!isConnected || !address) {
+        setWallets([])
+        setLoading(false)
+        return
+      }
+
+      try {
+        setLoading(true)
+        setWalletError(null)
+
+        // Get token addresses for current chain
+        const tokenAddresses =
+          chainId === 1
+            ? Object.values(TOKEN_ADDRESSES.mainnet)
+            : chainId === 137
+              ? Object.values(TOKEN_ADDRESSES.polygon)
+              : chainId === 42161
+                ? Object.values(TOKEN_ADDRESSES.arbitrum)
+                : []
+
+        // Fetch token balances with error handling
+        let tokens: any[] = []
+        try {
+          if (tokenAddresses.length > 0) {
+            tokens = await getTokenBalances(address, chainId, tokenAddresses)
+          }
+        } catch (error) {
+          console.warn("Failed to fetch token balances:", error)
+          setWalletError("Failed to fetch token balances. Some features may be limited.")
+        }
+
+        // Create wallet data
+        const walletData: WalletData = {
+          id: "connected-wallet",
+          name: "Connected Wallet",
+          network: getChainName(chainId),
+          address: address,
+          balance: nativeBalance ? Number.parseFloat(nativeBalance.formatted) : 0,
+          usdValue: 0, // Calculate based on token prices
+          change24h: 0,
+          connected: true,
+          tokens: tokens.map((token) => ({
+            symbol: token.symbol,
+            name: token.name,
+            balance: Number.parseFloat(token.balanceFormatted),
+            usdValue: 0, // Will be updated with price data
+            change24h: 0,
+            logo: token.logo || "🪙",
+          })),
+        }
+
+        setWallets([walletData])
+      } catch (error) {
+        console.error("Error fetching wallet data:", error)
+        setWalletError("Failed to fetch wallet data. Please try again.")
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    fetchWalletData()
+  }, [isConnected, address, chainId, nativeBalance])
+
+  const totalPortfolioValue = wallets.reduce((sum, wallet) => sum + wallet.usdValue, 0)
+  const totalChange24h = wallets.reduce((sum, wallet) => sum + (wallet.usdValue * wallet.change24h) / 100, 0)
+  const totalChangePercent = totalPortfolioValue > 0 ? (totalChange24h / totalPortfolioValue) * 100 : 0
+
+  const filteredTransactions = transactions.filter((tx) => {
+    const matchesSearch =
+      tx.asset.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      tx.hash.toLowerCase().includes(searchTerm.toLowerCase())
+    const matchesStatus = filterStatus === "all" || tx.status === filterStatus
+    return matchesSearch && matchesStatus
+  })
+
+  const handleConnectWallet = () => {
+    try {
+      open()
+    } catch (error) {
+      console.error("Failed to open wallet modal:", error)
+      setWalletError("Failed to open wallet connection. Please refresh and try again.")
+    }
+  }
+
+  const handleDisconnectWallet = () => {
+    try {
+      disconnect()
+      setWalletError(null)
+    } catch (error) {
+      console.error("Failed to disconnect wallet:", error)
+    }
+  }
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-black via-slate-900 to-slate-800 flex items-center justify-center">
+        <div className="text-center">
+          <div className="w-12 h-12 bg-gradient-to-r from-cyan-400 to-cyan-600 rounded-xl flex items-center justify-center mx-auto mb-4 animate-pulse">
+            <Wallet className="w-6 h-6 text-black" />
+          </div>
+          <p className="text-cyan-400">Loading crypto dashboard...</p>
+        </div>
+      </div>
+    )
+  }
+
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-black via-slate-900 to-slate-800">
+      {/* Header */}
+      <header className="border-b border-slate-700 bg-black/40 backdrop-blur-sm sticky top-0 z-50">
+        <div className="container mx-auto px-4 py-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center space-x-4">
+              <div className="w-10 h-10 bg-gradient-to-r from-cyan-400 to-cyan-600 rounded-xl flex items-center justify-center">
+                <Wallet className="w-5 h-5 text-black" />
+              </div>
+              <div>
+                <h1 className="text-2xl font-bold text-cyan-400">Crypto Dashboard</h1>
+                <p className="text-sm text-slate-400">Portfolio • Wallets • Analytics</p>
+              </div>
+            </div>
+            <div className="flex items-center space-x-3">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setShowBalances(!showBalances)}
+                className="border-slate-600 text-slate-300 hover:bg-slate-800"
+              >
+                {showBalances ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+              </Button>
+              <Button variant="outline" size="sm" className="border-slate-600 text-slate-300 hover:bg-slate-800">
+                <RefreshCw className="w-4 h-4 mr-2" />
+                Sync
+              </Button>
+              <Button
+                size="sm"
+                onClick={() => (isConnected ? handleDisconnectWallet() : handleConnectWallet())}
+                className="bg-gradient-to-r from-pink-500 to-pink-600 hover:from-pink-600 hover:to-pink-700 text-white"
+              >
+                <Plus className="w-4 h-4 mr-2" />
+                {isConnected ? "Disconnect" : "Connect Wallet"}
+              </Button>
+            </div>
+          </div>
+        </div>
+      </header>
+
+      <div className="container mx-auto px-4 py-8">
+        {/* Error Message */}
+        {walletError && (
+          <div className="mb-6 p-4 bg-red-500/20 border border-red-500/30 rounded-lg">
+            <p className="text-red-400 text-sm">{walletError}</p>
+          </div>
+        )}
+
+        {/* Portfolio Overview */}
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+          <Card className="bg-black/40 border-slate-700 backdrop-blur-sm">
+            <CardHeader className="pb-2">
+              <CardTitle className="text-sm font-medium text-slate-400">Total Portfolio Value</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="text-3xl font-bold text-white">
+                {showBalances ? `$${totalPortfolioValue.toLocaleString()}` : "••••••"}
+              </div>
+              <div
+                className={`flex items-center text-sm ${totalChangePercent >= 0 ? "text-green-400" : "text-red-400"}`}
+              >
+                {totalChangePercent >= 0 ? (
+                  <ArrowUpRight className="w-4 h-4 mr-1" />
+                ) : (
+                  <ArrowDownRight className="w-4 h-4 mr-1" />
+                )}
+                {totalChangePercent.toFixed(2)}% (24h)
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card className="bg-black/40 border-slate-700 backdrop-blur-sm">
+            <CardHeader className="pb-2">
+              <CardTitle className="text-sm font-medium text-slate-400">Connected Wallets</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="text-3xl font-bold text-cyan-400">{wallets.filter((w) => w.connected).length}</div>
+              <div className="text-sm text-slate-400">of {wallets.length} total</div>
+            </CardContent>
+          </Card>
+
+          <Card className="bg-black/40 border-slate-700 backdrop-blur-sm">
+            <CardHeader className="pb-2">
+              <CardTitle className="text-sm font-medium text-slate-400">24h P&L</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className={`text-3xl font-bold ${totalChange24h >= 0 ? "text-green-400" : "text-red-400"}`}>
+                {showBalances ? `${totalChange24h >= 0 ? "+" : ""}$${totalChange24h.toFixed(2)}` : "••••••"}
+              </div>
+              <div className="text-sm text-slate-400">Unrealized</div>
+            </CardContent>
+          </Card>
+
+          <Card className="bg-black/40 border-slate-700 backdrop-blur-sm">
+            <CardHeader className="pb-2">
+              <CardTitle className="text-sm font-medium text-slate-400">Active Positions</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="text-3xl font-bold text-yellow-400">
+                {wallets.reduce((sum, wallet) => sum + wallet.tokens.length, 0)}
+              </div>
+              <div className="text-sm text-slate-400">Across all wallets</div>
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Main Content Tabs */}
+        <Tabs defaultValue="wallets" className="space-y-6">
+          <TabsList className="bg-black/40 border border-slate-700">
+            <TabsTrigger value="wallets" className="data-[state=active]:bg-cyan-500 data-[state=active]:text-black">
+              <Wallet className="w-4 h-4 mr-2" />
+              Wallets
+            </TabsTrigger>
+            <TabsTrigger
+              value="transactions"
+              className="data-[state=active]:bg-cyan-500 data-[state=active]:text-black"
+            >
+              <Activity className="w-4 h-4 mr-2" />
+              Transactions
+            </TabsTrigger>
+            <TabsTrigger value="analytics" className="data-[state=active]:bg-cyan-500 data-[state=active]:text-black">
+              <BarChart3 className="w-4 h-4 mr-2" />
+              Analytics
+            </TabsTrigger>
+            <TabsTrigger value="settings" className="data-[state=active]:bg-cyan-500 data-[state=active]:text-black">
+              <Settings className="w-4 h-4 mr-2" />
+              Settings
+            </TabsTrigger>
+          </TabsList>
+
+          {/* Wallets Tab */}
+          <TabsContent value="wallets" className="space-y-6">
+            {!isConnected ? (
+              <Card className="bg-black/40 border-slate-700 backdrop-blur-sm">
+                <CardContent className="flex flex-col items-center justify-center py-12">
+                  <Wallet className="w-16 h-16 text-slate-600 mb-4" />
+                  <h3 className="text-xl font-bold text-white mb-2">No Wallet Connected</h3>
+                  <p className="text-slate-400 text-center mb-6">
+                    Connect your wallet to view your portfolio and manage your crypto assets.
+                  </p>
+                  <Button
+                    onClick={handleConnectWallet}
+                    className="bg-gradient-to-r from-cyan-500 to-cyan-600 hover:from-cyan-600 hover:to-cyan-700 text-black"
+                  >
+                    <Plus className="w-4 h-4 mr-2" />
+                    Connect Wallet
+                  </Button>
+                </CardContent>
+              </Card>
+            ) : (
+              <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
+                {wallets.map((wallet) => (
+                  <Card
+                    key={wallet.id}
+                    className="bg-black/40 border-slate-700 backdrop-blur-sm hover:border-cyan-500/50 transition-all duration-300"
+                  >
+                    <CardHeader>
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center space-x-3">
+                          <div className="w-10 h-10 bg-gradient-to-r from-slate-700 to-slate-600 rounded-lg flex items-center justify-center">
+                            <Wallet className="w-5 h-5 text-cyan-400" />
+                          </div>
+                          <div>
+                            <CardTitle className="text-white">{wallet.name}</CardTitle>
+                            <CardDescription className="text-slate-400">{wallet.network}</CardDescription>
+                          </div>
+                        </div>
+                        <Badge
+                          variant={isConnected ? "default" : "secondary"}
+                          className={isConnected ? "bg-green-500" : "bg-slate-600"}
+                        >
+                          {isConnected ? "Connected" : "Disconnected"}
+                        </Badge>
+                      </div>
+                    </CardHeader>
+                    <CardContent className="space-y-4">
+                      {/* Wallet Balance */}
+                      <div className="p-4 bg-slate-800/50 rounded-lg">
+                        <div className="flex items-center justify-between mb-2">
+                          <span className="text-sm text-slate-400">Total Balance</span>
+                          <Button variant="ghost" size="sm" className="h-6 w-6 p-0">
+                            <Copy className="w-3 h-3 text-slate-400" />
+                          </Button>
+                        </div>
+                        <div className="text-2xl font-bold text-white">
+                          {showBalances ? `${wallet.balance.toFixed(4)} ${nativeBalance?.symbol || "ETH"}` : "••••••"}
+                        </div>
+                        <div
+                          className={`flex items-center text-sm ${wallet.change24h >= 0 ? "text-green-400" : "text-red-400"}`}
+                        >
+                          {wallet.change24h >= 0 ? (
+                            <TrendingUp className="w-4 h-4 mr-1" />
+                          ) : (
+                            <TrendingDown className="w-4 h-4 mr-1" />
+                          )}
+                          {wallet.change24h >= 0 ? "+" : ""}
+                          {wallet.change24h.toFixed(2)}% (24h)
+                        </div>
+                      </div>
+
+                      {/* Address */}
+                      <div className="flex items-center justify-between p-3 bg-slate-800/30 rounded-lg">
+                        <span className="text-sm text-slate-400 font-mono">
+                          {address ? truncateAddress(address) : "Not connected"}
+                        </span>
+                        <div className="flex space-x-2">
+                          <Button variant="ghost" size="sm" className="h-6 w-6 p-0">
+                            <Copy className="w-3 h-3 text-slate-400" />
+                          </Button>
+                          <Button variant="ghost" size="sm" className="h-6 w-6 p-0">
+                            <ExternalLink className="w-3 h-3 text-slate-400" />
+                          </Button>
+                        </div>
+                      </div>
+
+                      {/* Token Holdings */}
+                      <div className="space-y-2">
+                        <h4 className="text-sm font-medium text-slate-300">Holdings</h4>
+                        {wallet.tokens.length > 0 ? (
+                          wallet.tokens.map((token, index) => (
+                            <div key={index} className="flex items-center justify-between p-2 bg-slate-800/30 rounded">
+                              <div className="flex items-center space-x-2">
+                                <span className="text-lg">{token.logo}</span>
+                                <div>
+                                  <div className="text-sm font-medium text-white">{token.symbol}</div>
+                                  <div className="text-xs text-slate-400">{token.name}</div>
+                                </div>
+                              </div>
+                              <div className="text-right">
+                                <div className="text-sm font-medium text-white">
+                                  {showBalances ? token.balance.toFixed(4) : "••••"}
+                                </div>
+                                <div className="text-xs text-slate-400">
+                                  {showBalances ? `$${token.usdValue.toLocaleString()}` : "••••"}
+                                </div>
+                              </div>
+                            </div>
+                          ))
+                        ) : (
+                          <div className="text-center py-4 text-slate-400 text-sm">
+                            No tokens found or failed to load token balances.
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Actions */}
+                      <div className="flex space-x-2 pt-2">
+                        <Button size="sm" className="flex-1 bg-cyan-500 hover:bg-cyan-600 text-black">
+                          View Details
+                        </Button>
+                        <Button size="sm" variant="outline" className="border-slate-600 text-slate-300">
+                          <Settings className="w-4 h-4" />
+                        </Button>
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            )}
+          </TabsContent>
+
+          {/* Transactions Tab */}
+          <TabsContent value="transactions" className="space-y-6">
+            <Card className="bg-black/40 border-slate-700 backdrop-blur-sm">
+              <CardHeader>
+                <div className="flex items-center justify-between">
+                  <CardTitle className="text-white">Transaction History</CardTitle>
+                  <div className="flex items-center space-x-2">
+                    <div className="relative">
+                      <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400 w-4 h-4" />
+                      <Input
+                        placeholder="Search transactions..."
+                        value={searchTerm}
+                        onChange={(e) => setSearchTerm(e.target.value)}
+                        className="pl-10 w-64 bg-slate-800 border-slate-600 text-white"
+                      />
+                    </div>
+                    <Select value={filterStatus} onValueChange={setFilterStatus}>
+                      <SelectTrigger className="w-32 bg-slate-800 border-slate-600 text-white">
+                        <Filter className="w-4 h-4 mr-2" />
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent className="bg-slate-800 border-slate-600">
+                        <SelectItem value="all">All Status</SelectItem>
+                        <SelectItem value="confirmed">Confirmed</SelectItem>
+                        <SelectItem value="pending">Pending</SelectItem>
+                        <SelectItem value="failed">Failed</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-3">
+                  {filteredTransactions.length > 0 ? (
+                    filteredTransactions.map((tx) => (
+                      <div
+                        key={tx.id}
+                        className="flex items-center justify-between p-4 bg-slate-800/30 rounded-lg hover:bg-slate-800/50 transition-colors"
+                      >
+                        <div className="flex items-center space-x-4">
+                          <div
+                            className={`w-10 h-10 rounded-full flex items-center justify-center ${
+                              tx.type === "receive"
+                                ? "bg-green-500/20"
+                                : tx.type === "send"
+                                  ? "bg-red-500/20"
+                                  : tx.type === "swap"
+                                    ? "bg-blue-500/20"
+                                    : "bg-purple-500/20"
+                            }`}
+                          >
+                            {tx.type === "receive" ? (
+                              <ArrowDownRight className="w-5 h-5 text-green-400" />
+                            ) : tx.type === "send" ? (
+                              <ArrowUpRight className="w-5 h-5 text-red-400" />
+                            ) : tx.type === "swap" ? (
+                              <RefreshCw className="w-5 h-5 text-blue-400" />
+                            ) : (
+                              <Activity className="w-5 h-5 text-purple-400" />
+                            )}
+                          </div>
+                          <div>
+                            <div className="flex items-center space-x-2">
+                              <span className="font-medium text-white capitalize">{tx.type}</span>
+                              <span className="text-cyan-400">{tx.asset}</span>
+                            </div>
+                            <div className="text-sm text-slate-400">{new Date(tx.timestamp).toLocaleString()}</div>
+                          </div>
+                        </div>
+                        <div className="flex items-center space-x-4">
+                          <div className="text-right">
+                            <div className="font-medium text-white">
+                              {tx.type === "receive" ? "+" : "-"}
+                              {tx.amount} {tx.asset}
+                            </div>
+                            <div className="text-sm text-slate-400">${tx.usdValue.toLocaleString()}</div>
+                          </div>
+                          <Badge
+                            variant={
+                              tx.status === "confirmed"
+                                ? "default"
+                                : tx.status === "pending"
+                                  ? "secondary"
+                                  : "destructive"
+                            }
+                            className={
+                              tx.status === "confirmed"
+                                ? "bg-green-500"
+                                : tx.status === "pending"
+                                  ? "bg-yellow-500"
+                                  : "bg-red-500"
+                            }
+                          >
+                            {tx.status}
+                          </Badge>
+                          <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+                            <ExternalLink className="w-4 h-4 text-slate-400" />
+                          </Button>
+                        </div>
+                      </div>
+                    ))
+                  ) : (
+                    <div className="text-center py-8 text-slate-400">
+                      {isConnected ? "No transactions found." : "Connect your wallet to view transactions."}
+                    </div>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          {/* Analytics Tab */}
+          <TabsContent value="analytics" className="space-y-6">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              {/* Portfolio Allocation */}
+              <Card className="bg-black/40 border-slate-700 backdrop-blur-sm">
+                <CardHeader>
+                  <CardTitle className="text-white flex items-center">
+                    <PieChart className="w-5 h-5 mr-2 text-cyan-400" />
+                    Portfolio Allocation
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-4">
+                    {wallets.length > 0 ? (
+                      wallets.map((wallet, index) => {
+                        const percentage = totalPortfolioValue > 0 ? (wallet.usdValue / totalPortfolioValue) * 100 : 0
+                        return (
+                          <div key={wallet.id} className="space-y-2">
+                            <div className="flex justify-between text-sm">
+                              <span className="text-slate-300">{wallet.name}</span>
+                              <span className="text-white">{percentage.toFixed(1)}%</span>
+                            </div>
+                            <Progress
+                              value={percentage}
+                              className="h-2"
+                              style={{
+                                background: "rgb(30 41 59)",
+                              }}
+                            />
+                          </div>
+                        )
+                      })
+                    ) : (
+                      <div className="text-center py-8 text-slate-400">
+                        Connect your wallet to view portfolio allocation.
+                      </div>
+                    )}
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Performance Metrics */}
+              <Card className="bg-black/40 border-slate-700 backdrop-blur-sm">
+                <CardHeader>
+                  <CardTitle className="text-white flex items-center">
+                    <BarChart3 className="w-5 h-5 mr-2 text-cyan-400" />
+                    Performance Metrics
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-4">
+                    <div className="flex justify-between items-center p-3 bg-slate-800/30 rounded-lg">
+                      <span className="text-slate-300">Best Performer (24h)</span>
+                      <div className="text-right">
+                        <div className="text-green-400 font-medium">ETH</div>
+                        <div className="text-sm text-slate-400">+2.34%</div>
+                      </div>
+                    </div>
+                    <div className="flex justify-between items-center p-3 bg-slate-800/30 rounded-lg">
+                      <span className="text-slate-300">Network</span>
+                      <div className="text-right">
+                        <div className="text-cyan-400 font-medium">{getChainName(chainId)}</div>
+                        <div className="text-sm text-slate-400">Current chain</div>
+                      </div>
+                    </div>
+                    <div className="flex justify-between items-center p-3 bg-slate-800/30 rounded-lg">
+                      <span className="text-slate-300">Wallet Status</span>
+                      <div className="text-right">
+                        <div className={`font-medium ${isConnected ? "text-green-400" : "text-red-400"}`}>
+                          {isConnected ? "Connected" : "Disconnected"}
+                        </div>
+                        <div className="text-sm text-slate-400">{isConnected ? "Active" : "Inactive"}</div>
+                      </div>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+          </TabsContent>
+
+          {/* Settings Tab */}
+          <TabsContent value="settings" className="space-y-6">
+            <Card className="bg-black/40 border-slate-700 backdrop-blur-sm">
+              <CardHeader>
+                <CardTitle className="text-white">Wallet Settings</CardTitle>
+                <CardDescription className="text-slate-400">
+                  Configure your wallet connections and preferences
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-6">
+                <div className="space-y-4">
+                  <h3 className="text-lg font-medium text-white">Connection Status</h3>
+                  <div className="flex items-center justify-between p-4 bg-slate-800/30 rounded-lg">
+                    <div>
+                      <div className="text-white font-medium">Wallet Connection</div>
+                      <div className="text-sm text-slate-400">
+                        {isConnected ? `Connected to ${getChainName(chainId)}` : "No wallet connected"}
+                      </div>
+                    </div>
+                    <Button
+                      variant="outline"
+                      className={`${isConnected ? "border-red-500 text-red-400" : "border-cyan-500 text-cyan-400"}`}
+                      onClick={() => (isConnected ? handleDisconnectWallet() : handleConnectWallet())}
+                    >
+                      {isConnected ? "Disconnect" : "Connect"}
+                    </Button>
+                  </div>
+                </div>
+
+                <div className="space-y-4">
+                  <h3 className="text-lg font-medium text-white">Display Settings</h3>
+                  <div className="flex items-center justify-between p-4 bg-slate-800/30 rounded-lg">
+                    <div>
+                      <div className="text-white font-medium">Show Balances</div>
+                      <div className="text-sm text-slate-400">Display wallet balances and amounts</div>
+                    </div>
+                    <Button
+                      variant="outline"
+                      className="border-cyan-500 text-cyan-400"
+                      onClick={() => setShowBalances(!showBalances)}
+                    >
+                      {showBalances ? "Hide" : "Show"}
+                    </Button>
+                  </div>
+                </div>
+
+                {isConnected && (
+                  <div className="space-y-4">
+                    <h3 className="text-lg font-medium text-white">Connected Wallet</h3>
+                    <div className="flex items-center justify-between p-4 bg-slate-800/30 rounded-lg">
+                      <div className="flex items-center space-x-3">
+                        <div className="w-8 h-8 bg-gradient-to-r from-slate-700 to-slate-600 rounded-lg flex items-center justify-center">
+                          <Wallet className="w-4 h-4 text-cyan-400" />
+                        </div>
+                        <div>
+                          <div className="text-white font-medium">Current Wallet</div>
+                          <div className="text-sm text-slate-400">{address ? truncateAddress(address) : ""}</div>
+                        </div>
+                      </div>
+                      <Badge className="bg-green-500">Connected</Badge>
+                    </div>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </TabsContent>
+        </Tabs>
+      </div>
+    </div>
+  )
+}
