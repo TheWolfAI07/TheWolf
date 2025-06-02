@@ -1,7 +1,3 @@
-import { formatUnits } from "viem"
-import { readContract, readContracts } from "@wagmi/core"
-import { config } from "./wallet-config"
-
 // ERC-20 ABI for token operations
 export const ERC20_ABI = [
   {
@@ -81,109 +77,20 @@ export interface WalletData {
   totalUsdValue: number
 }
 
-// Get native token balance
+// Mock function for getting native balance (since we removed wallet connection)
 export async function getNativeBalance(address: string, chainId: number): Promise<string> {
-  try {
-    const balance = await readContract(config, {
-      address: address as `0x${string}`,
-      abi: [
-        {
-          constant: true,
-          inputs: [{ name: "account", type: "address" }],
-          name: "balanceOf",
-          outputs: [{ name: "", type: "uint256" }],
-          type: "function",
-        },
-      ],
-      functionName: "balanceOf",
-      args: [address as `0x${string}`],
-      chainId,
-    })
-    return balance.toString()
-  } catch (error) {
-    console.error("Error fetching native balance:", error)
-    return "0"
-  }
+  // Return mock data since we don't have actual wallet connection
+  return "0"
 }
 
-// Get token balances for an address
+// Mock function for getting token balances (since we removed wallet connection)
 export async function getTokenBalances(
   address: string,
   chainId: number,
   tokenAddresses: string[],
 ): Promise<TokenBalance[]> {
-  try {
-    const contracts = tokenAddresses.flatMap((tokenAddress) => [
-      {
-        address: tokenAddress as `0x${string}`,
-        abi: ERC20_ABI,
-        functionName: "balanceOf",
-        args: [address as `0x${string}`],
-        chainId,
-      },
-      {
-        address: tokenAddress as `0x${string}`,
-        abi: ERC20_ABI,
-        functionName: "symbol",
-        chainId,
-      },
-      {
-        address: tokenAddress as `0x${string}`,
-        abi: ERC20_ABI,
-        functionName: "name",
-        chainId,
-      },
-      {
-        address: tokenAddress as `0x${string}`,
-        abi: ERC20_ABI,
-        functionName: "decimals",
-        chainId,
-      },
-    ])
-
-    const results = await readContracts(config, { contracts })
-
-    const tokens: TokenBalance[] = []
-
-    for (let i = 0; i < tokenAddresses.length; i++) {
-      const balanceResult = results[i * 4]
-      const symbolResult = results[i * 4 + 1]
-      const nameResult = results[i * 4 + 2]
-      const decimalsResult = results[i * 4 + 3]
-
-      if (
-        balanceResult.status === "success" &&
-        symbolResult.status === "success" &&
-        nameResult.status === "success" &&
-        decimalsResult.status === "success"
-      ) {
-        const balance = balanceResult.result as bigint
-        const symbol = symbolResult.result as string
-        const name = nameResult.result as string
-        const decimals = decimalsResult.result as number
-
-        const balanceFormatted = formatUnits(balance, decimals)
-
-        // Only include tokens with non-zero balance
-        if (balance > 0n) {
-          tokens.push({
-            address: tokenAddresses[i],
-            symbol,
-            name,
-            balance: balance.toString(),
-            decimals,
-            balanceFormatted,
-            logo: getTokenLogo(symbol),
-          })
-        }
-      }
-    }
-
-    return tokens
-  } catch (error) {
-    console.error("Error fetching token balances:", error)
-    return []
-  }
+  // Return empty array since we don't have actual wallet connection
+  return []
 }
 
 // Get token logo (you can replace with actual logo service)
@@ -288,4 +195,60 @@ export function formatNumber(num: number, decimals = 2): string {
 // Truncate address
 export function truncateAddress(address: string, chars = 4): string {
   return `${address.slice(0, chars + 2)}...${address.slice(-chars)}`
+}
+
+// Generate mock crypto data for demonstration
+export function generateMockCryptoData() {
+  return [
+    {
+      id: "bitcoin",
+      symbol: "BTC",
+      name: "Bitcoin",
+      current_price: 43250.5,
+      price_change_percentage_24h: 2.45,
+      market_cap: 847000000000,
+      volume_24h: 28500000000,
+      logo: "₿",
+    },
+    {
+      id: "ethereum",
+      symbol: "ETH",
+      name: "Ethereum",
+      current_price: 2650.75,
+      price_change_percentage_24h: -1.23,
+      market_cap: 318000000000,
+      volume_24h: 15200000000,
+      logo: "🔷",
+    },
+    {
+      id: "binancecoin",
+      symbol: "BNB",
+      name: "BNB",
+      current_price: 315.2,
+      price_change_percentage_24h: 0.87,
+      market_cap: 47000000000,
+      volume_24h: 1800000000,
+      logo: "🟡",
+    },
+    {
+      id: "solana",
+      symbol: "SOL",
+      name: "Solana",
+      current_price: 98.45,
+      price_change_percentage_24h: 4.12,
+      market_cap: 42000000000,
+      volume_24h: 2100000000,
+      logo: "◎",
+    },
+    {
+      id: "cardano",
+      symbol: "ADA",
+      name: "Cardano",
+      current_price: 0.485,
+      price_change_percentage_24h: -2.15,
+      market_cap: 17000000000,
+      volume_24h: 450000000,
+      logo: "💙",
+    },
+  ]
 }
