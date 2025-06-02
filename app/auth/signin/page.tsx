@@ -20,6 +20,8 @@ export default function SignIn() {
 
     // Simulate auth - in real app, implement proper authentication
     setTimeout(() => {
+      // Set signed in state in localStorage
+      localStorage.setItem("wolf-signed-in", "true")
       setIsLoading(false)
       router.push("/dashboard/wolf-grid")
     }, 1000)
