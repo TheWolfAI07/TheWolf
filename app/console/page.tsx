@@ -104,6 +104,8 @@ export default function ConsolePage() {
   const [databaseTables, setDatabaseTables] = useState<DatabaseTable[]>([])
   const [loading, setLoading] = useState(true)
   const chatEndRef = useRef<HTMLDivElement>(null)
+  const [primaryColor, setPrimaryColor] = useState("#00E5CF")
+  const [secondaryColor, setSecondaryColor] = useState("#EC4899")
 
   // Initialize real data
   useEffect(() => {
@@ -1223,14 +1225,22 @@ return { success: true, data };`,
                     <Label className="text-slate-300">Primary Color</Label>
                     <div className="flex items-center space-x-2">
                       <div className="w-8 h-8 bg-cyan-500 rounded border-2 border-white"></div>
-                      <Input value="#00E5CF" className="bg-slate-800 border-slate-600 text-white" />
+                      <Input
+                        value={primaryColor}
+                        onChange={(e) => setPrimaryColor(e.target.value)}
+                        className="bg-slate-800 border-slate-600 text-white"
+                      />
                     </div>
                   </div>
                   <div className="space-y-2">
                     <Label className="text-slate-300">Secondary Color</Label>
                     <div className="flex items-center space-x-2">
                       <div className="w-8 h-8 bg-pink-500 rounded border-2 border-white"></div>
-                      <Input value="#EC4899" className="bg-slate-800 border-slate-600 text-white" />
+                      <Input
+                        value={secondaryColor}
+                        onChange={(e) => setSecondaryColor(e.target.value)}
+                        className="bg-slate-800 border-slate-600 text-white"
+                      />
                     </div>
                   </div>
                   <div className="space-y-2">
