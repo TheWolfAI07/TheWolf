@@ -28,7 +28,14 @@ const AuthContext = createContext<AuthContextType>({
   isAuthenticated: false,
 })
 
-export const useAuthContext = () => useContext(AuthContext)
+// Export the hook
+export const useAuthContext = () => {
+  const context = useContext(AuthContext)
+  if (!context) {
+    throw new Error("useAuthContext must be used within an AuthProvider")
+  }
+  return context
+}
 
 interface AuthProviderProps {
   children: React.ReactNode
@@ -113,7 +120,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     if (isProtectedRoute && !user) {
       router.push("/auth/signin")
     } else if (isAuthRoute && user) {
-      router.push("/dashboard/wolf-grid")
+      router.push("/dashboard")
     }
   }, [user, loading, pathname, router, initialLoadComplete])
 
