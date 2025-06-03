@@ -86,7 +86,7 @@
 
 /* Luxury Wolf Theme Colors */
 :root {
-  --luxury-black: #0a0a0a;
+  --luxury-black: #000000;
   --gunmetal: #2c3e50;
   --dark-gunmetal: #1a252f;
   --shiny-gunmetal: #34495e;
@@ -97,21 +97,9 @@
   --gold-dust: #fff8dc;
 }
 
-/* Luxury Gradients */
+/* Luxury Dark Background */
 .bg-luxury-dark {
   background: linear-gradient(135deg, var(--luxury-black) 0%, var(--dark-gunmetal) 50%, var(--gunmetal) 100%);
-}
-
-.bg-gunmetal-gradient {
-  background: linear-gradient(135deg, var(--dark-gunmetal) 0%, var(--shiny-gunmetal) 100%);
-}
-
-.bg-aqua-gradient {
-  background: linear-gradient(135deg, var(--turquoise) 0%, var(--aqua) 100%);
-}
-
-.bg-gold-gradient {
-  background: linear-gradient(135deg, var(--gold-accent) 0%, var(--luxury-gold) 100%);
 }
 
 /* Gold Dust Animation */
@@ -184,88 +172,21 @@
   }
 }
 
-/* Aqua Glow Effects */
-.aqua-glow {
-  box-shadow: 0 0 20px rgba(0, 229, 207, 0.3);
-  border: 1px solid var(--aqua);
+/* Animation Delays */
+.animation-delay-1000 {
+  animation-delay: 1s;
 }
 
-.aqua-glow:hover {
-  box-shadow: 0 0 30px rgba(0, 229, 207, 0.5);
-  transform: translateY(-2px);
-  transition: all 0.3s ease;
+.animation-delay-2000 {
+  animation-delay: 2s;
 }
 
-/* Gold Border Effects */
-.gold-border {
-  border: 2px solid var(--luxury-gold);
-  box-shadow: 0 0 15px rgba(255, 215, 0, 0.3);
+.animation-delay-3000 {
+  animation-delay: 3s;
 }
 
-.gold-border:hover {
-  box-shadow: 0 0 25px rgba(255, 215, 0, 0.5);
-  transform: scale(1.02);
-  transition: all 0.3s ease;
-}
-
-/* Text Effects */
-.text-aqua {
-  color: var(--aqua);
-  text-shadow: 0 0 10px rgba(0, 229, 207, 0.5);
-}
-
-.text-gold {
-  color: var(--luxury-gold);
-  text-shadow: 0 0 10px rgba(255, 215, 0, 0.5);
-}
-
-.text-gunmetal {
-  color: var(--shiny-gunmetal);
-}
-
-/* Luxury Card Styles */
-.luxury-card {
-  background: linear-gradient(135deg, var(--dark-gunmetal) 0%, var(--gunmetal) 100%);
-  border: 1px solid var(--aqua);
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3), 0 0 20px rgba(0, 229, 207, 0.1);
-}
-
-.luxury-card:hover {
-  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.4), 0 0 30px rgba(0, 229, 207, 0.2);
-  transform: translateY(-4px);
-  transition: all 0.3s ease;
-}
-
-/* Premium Button Styles */
-.btn-luxury {
-  background: linear-gradient(135deg, var(--aqua) 0%, var(--turquoise) 100%);
-  border: 2px solid var(--luxury-gold);
-  color: var(--luxury-black);
-  font-weight: 600;
-  text-shadow: none;
-  box-shadow: 0 4px 15px rgba(0, 229, 207, 0.3);
-}
-
-.btn-luxury:hover {
-  background: linear-gradient(135deg, var(--turquoise) 0%, var(--aqua) 100%);
-  box-shadow: 0 6px 20px rgba(0, 229, 207, 0.4);
-  transform: translateY(-2px);
-  transition: all 0.3s ease;
-}
-
-.btn-gold {
-  background: linear-gradient(135deg, var(--luxury-gold) 0%, var(--gold-accent) 100%);
-  border: 2px solid var(--aqua);
-  color: var(--luxury-black);
-  font-weight: 600;
-  box-shadow: 0 4px 15px rgba(255, 215, 0, 0.3);
-}
-
-.btn-gold:hover {
-  background: linear-gradient(135deg, var(--gold-accent) 0%, var(--luxury-gold) 100%);
-  box-shadow: 0 6px 20px rgba(255, 215, 0, 0.4);
-  transform: translateY(-2px);
-  transition: all 0.3s ease;
+.animation-delay-4000 {
+  animation-delay: 4s;
 }
 
 /* Grid Layout Styles */
@@ -325,21 +246,39 @@
 .bg-shiny-gunmetal {
   background-color: var(--shiny-gunmetal);
 }
-.bg-aqua {
-  background-color: var(--aqua);
+.text-aqua {
+  color: var(--aqua);
 }
-.bg-turquoise {
-  background-color: var(--turquoise);
+.text-turquoise {
+  color: var(--turquoise);
 }
-.bg-luxury-gold {
-  background-color: var(--luxury-gold);
+.text-luxury-gold {
+  color: var(--luxury-gold);
 }
 .border-aqua {
   border-color: var(--aqua);
 }
-.border-gold {
+.border-luxury-gold {
   border-color: var(--luxury-gold);
 }
 .border-gunmetal {
   border-color: var(--gunmetal);
+}
+
+/* Scrollbar Styling */
+::-webkit-scrollbar {
+  width: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--dark-gunmetal);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--aqua);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--turquoise);
 }
