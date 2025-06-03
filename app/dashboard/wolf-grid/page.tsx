@@ -1,12 +1,15 @@
 "use client"
 
 import { useState, useEffect } from "react"
+import dynamic from "next/dynamic"
 import { LineChart, Line, CartesianGrid, XAxis, YAxis, Tooltip, ResponsiveContainer } from "recharts"
 import { Button } from "@/components/ui/button"
 import { Textarea } from "@/components/ui/textarea"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { TrendingUp, Activity, Zap, Target, MessageSquare, CheckSquare, ArrowLeft } from "lucide-react"
-import Link from "next/link"
+import { TrendingUp, Activity, Zap, Target, MessageSquare, CheckSquare, Wallet } from "lucide-react"
+import { Navbar } from "@/components/navbar"
+
+// Dynamically import GridLayout to avoid SSR issues
+const GridLayout = dynamic(() => import("react-grid-layout"), { ssr: false })
 
 const sampleData = [
   { name: "Jan", uv: 400, profit: 1200 },
@@ -35,6 +38,13 @@ interface LogEntry {
   message: string
 }
 
+interface MockWallet {
+  address: string
+  balance: string
+  symbol: string
+  connected: boolean
+}
+
 export default function WolfGridDashboard() {
   const [mounted, setMounted] = useState(false)
   const [tasks, setTasks] = useState<Task[]>([
@@ -56,14 +66,38 @@ export default function WolfGridDashboard() {
   ])
 
   const [idea, setIdea] = useState("")
+  const [liveProfit, setLiveProfit] = useState(12345)
   const [cryptoPrices, setCryptoPrices] = useState({
     BTC: 34500,
     ETH: 1800,
     USDT: 5000,
   })
 
+  // Mock wallet state
+  const [mockWallet, setMockWallet] = useState<MockWallet>({
+    address: "0x742d35Cc6634C0532925a3b8D4C9db96590b5",
+    balance: "2.4567",
+    symbol: "ETH",
+    connected: false,
+  })
+
+  // Layout configuration
+  const layout = [
+    { i: "crypto", x: 0, y: 0, w: 4, h: 4 },
+    { i: "tasks", x: 4, y: 0, w: 4, h: 4 },
+    { i: "movements", x: 8, y: 0, w: 4, h: 4 },
+    { i: "ideas", x: 0, y: 4, w: 6, h: 3 },
+    { i: "logs", x: 6, y: 4, w: 6, h: 3 },
+    { i: "goals", x: 0, y: 7, w: 12, h: 4 },
+  ]
+
   useEffect(() => {
     setMounted(true)
+
+    // Simulate live profit updates
+    const profitInterval = setInterval(() => {
+      setLiveProfit((prev) => prev + Math.floor(Math.random() * 100) - 50)
+    }, 5000)
 
     // Simulate crypto price updates
     const priceInterval = setInterval(() => {
@@ -75,6 +109,7 @@ export default function WolfGridDashboard() {
     }, 10000)
 
     return () => {
+      clearInterval(profitInterval)
       clearInterval(priceInterval)
     }
   }, [])
@@ -97,6 +132,24 @@ export default function WolfGridDashboard() {
       setLogs((prev) => [newLog, ...prev.slice(0, 4)])
       setIdea("")
     }
+  }
+
+  const toggleWalletConnection = () => {
+    setMockWallet((prev) => ({
+      ...prev,
+      connected: !prev.connected,
+    }))
+
+    const newLog: LogEntry = {
+      id: Date.now().toString(),
+      timestamp: new Date().toLocaleTimeString("en-US", {
+        hour12: false,
+        hour: "2-digit",
+        minute: "2-digit",
+      }),
+      message: mockWallet.connected ? "Wallet disconnected" : "Wallet connected successfully",
+    }
+    setLogs((prev) => [newLog, ...prev.slice(0, 4)])
   }
 
   const getStatusColor = (status: string) => {
@@ -127,219 +180,186 @@ export default function WolfGridDashboard() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-black via-slate-900 to-slate-800">
-      {/* Header */}
-      <header className="border-b border-slate-700 bg-black/40 backdrop-blur-sm sticky top-0 z-50">
-        <div className="container mx-auto px-4 py-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-4">
-              <Link
-                href="/"
-                className="flex items-center space-x-2 text-slate-300 hover:text-cyan-400 transition-colors"
-              >
-                <ArrowLeft className="w-4 h-4" />
-                <span>Back</span>
-              </Link>
-              <div className="w-8 h-8 bg-gradient-to-r from-cyan-400 to-cyan-600 rounded-lg flex items-center justify-center">
-                <span className="text-black font-bold text-sm">W</span>
-              </div>
-              <h1 className="text-xl font-bold text-cyan-400">Wolf Grid Dashboard</h1>
-            </div>
-            <nav className="hidden md:flex items-center space-x-6">
-              <Link href="/crypto" className="text-slate-300 hover:text-cyan-400 transition-colors">
-                Crypto
-              </Link>
-              <Link href="/console" className="text-slate-300 hover:text-cyan-400 transition-colors">
-                Console
-              </Link>
-              <Link href="/docs" className="text-slate-300 hover:text-cyan-400 transition-colors">
-                Docs
-              </Link>
-            </nav>
-          </div>
-        </div>
-      </header>
+      <Navbar />
 
-      <div className="container mx-auto px-4 py-8">
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <div className="pt-20 p-4">
+        <GridLayout
+          className="layout"
+          layout={layout}
+          cols={12}
+          rowHeight={30}
+          width={typeof window !== "undefined" ? window.innerWidth - 32 : 1200}
+          draggableHandle=".drag-handle"
+          isDraggable={true}
+          isResizable={true}
+        >
           {/* Crypto Snapshot */}
-          <Card className="bg-black/40 border-slate-700 backdrop-blur-sm">
-            <CardHeader>
-              <CardTitle className="text-cyan-400 flex items-center">
-                <TrendingUp className="w-5 h-5 mr-2" />
-                Crypto Snapshot
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-3">
+          <div key="crypto" className="bg-slate-800 rounded-lg p-4 border border-gray-700">
+            <div className="drag-handle text-cyan-400 font-semibold mb-3 cursor-move flex items-center">
+              <TrendingUp className="w-4 h-4 mr-2" />
+              Crypto Snapshot
+            </div>
+            <div className="space-y-3">
               <div className="flex justify-between items-center">
-                <span className="text-slate-300">BTC</span>
+                <span className="text-gray-300">BTC</span>
                 <span className="font-bold text-white">${cryptoPrices.BTC.toLocaleString()}</span>
               </div>
               <div className="flex justify-between items-center">
-                <span className="text-slate-300">ETH</span>
+                <span className="text-gray-300">ETH</span>
                 <span className="font-bold text-white">${cryptoPrices.ETH.toLocaleString()}</span>
               </div>
+              {mockWallet.connected && (
+                <div className="flex justify-between items-center">
+                  <span className="text-gray-300">{mockWallet.symbol}</span>
+                  <span className="font-bold text-cyan-400">{mockWallet.balance}</span>
+                </div>
+              )}
               <div className="flex justify-between items-center">
-                <span className="text-slate-300">USDT</span>
+                <span className="text-gray-300">USDT</span>
                 <span className="font-bold text-white">${cryptoPrices.USDT.toLocaleString()}</span>
               </div>
-              <Link href="/crypto" className="block mt-4">
-                <Button className="w-full bg-gradient-to-r from-cyan-500 to-cyan-600 hover:from-cyan-600 hover:to-cyan-700 text-black">
-                  View All →
-                </Button>
-              </Link>
-            </CardContent>
-          </Card>
+              <Button
+                onClick={toggleWalletConnection}
+                className={`w-full mt-3 ${
+                  mockWallet.connected ? "bg-red-600 hover:bg-red-700" : "bg-cyan-600 hover:bg-cyan-700"
+                } text-white`}
+              >
+                <Wallet className="w-4 h-4 mr-2" />
+                {mockWallet.connected ? "Disconnect" : "Connect Wallet"}
+              </Button>
+            </div>
+          </div>
 
           {/* Active Tasks */}
-          <Card className="bg-black/40 border-slate-700 backdrop-blur-sm">
-            <CardHeader>
-              <CardTitle className="text-cyan-400 flex items-center">
-                <CheckSquare className="w-5 h-5 mr-2" />
-                Active Tasks
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <ul className="space-y-3">
-                {tasks.map((task) => (
-                  <li key={task.id} className="flex justify-between items-center">
-                    <span className={task.completed ? "line-through text-slate-500" : "text-slate-300"}>
-                      {task.title}
-                    </span>
-                    <input
-                      type="checkbox"
-                      className="accent-pink-500"
-                      checked={task.completed}
-                      onChange={() => toggleTask(task.id)}
-                    />
-                  </li>
-                ))}
-              </ul>
-            </CardContent>
-          </Card>
+          <div key="tasks" className="bg-slate-800 rounded-lg p-4 border border-gray-700">
+            <div className="drag-handle text-cyan-400 font-semibold mb-3 cursor-move flex items-center">
+              <CheckSquare className="w-4 h-4 mr-2" />
+              Active Tasks
+            </div>
+            <ul className="space-y-3 text-gray-300">
+              {tasks.map((task) => (
+                <li key={task.id} className="flex justify-between items-center">
+                  <span className={task.completed ? "line-through text-gray-500" : ""}>{task.title}</span>
+                  <input
+                    type="checkbox"
+                    className="accent-pink-500"
+                    checked={task.completed}
+                    onChange={() => toggleTask(task.id)}
+                  />
+                </li>
+              ))}
+            </ul>
+          </div>
 
           {/* Wolf Movements */}
-          <Card className="bg-black/40 border-slate-700 backdrop-blur-sm">
-            <CardHeader>
-              <CardTitle className="text-cyan-400 flex items-center">
-                <Activity className="w-5 h-5 mr-2" />
-                Wolf Movements
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <ul className="space-y-3">
-                {movements.map((movement) => (
-                  <li key={movement.id} className="flex justify-between items-center">
-                    <span className="text-slate-300">{movement.action}</span>
-                    <span className={getStatusColor(movement.status)}>
-                      {movement.status.charAt(0).toUpperCase() + movement.status.slice(1)}
-                    </span>
-                  </li>
-                ))}
-              </ul>
-            </CardContent>
-          </Card>
+          <div key="movements" className="bg-slate-800 rounded-lg p-4 border border-gray-700">
+            <div className="drag-handle text-cyan-400 font-semibold mb-3 cursor-move flex items-center">
+              <Activity className="w-4 h-4 mr-2" />
+              Wolf Movements
+            </div>
+            <ul className="space-y-3">
+              {movements.map((movement) => (
+                <li key={movement.id} className="flex justify-between items-center">
+                  <span className="text-gray-300">{movement.action}</span>
+                  <span className={getStatusColor(movement.status)}>
+                    {movement.status.charAt(0).toUpperCase() + movement.status.slice(1)}
+                  </span>
+                </li>
+              ))}
+            </ul>
+          </div>
 
           {/* Quick Idea Drop */}
-          <Card className="bg-black/40 border-slate-700 backdrop-blur-sm lg:col-span-2">
-            <CardHeader>
-              <CardTitle className="text-cyan-400 flex items-center">
-                <MessageSquare className="w-5 h-5 mr-2" />
-                Quick Idea Drop
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <Textarea
-                placeholder="Got a wild idea? Drop it here…"
-                value={idea}
-                onChange={(e) => setIdea(e.target.value)}
-                className="w-full h-24 bg-slate-900 border-slate-600 text-white resize-none"
-              />
-              <Button
-                onClick={launchIdea}
-                className="bg-gradient-to-r from-pink-500 to-pink-600 hover:from-pink-600 hover:to-pink-700 text-white"
-                disabled={!idea.trim()}
-              >
-                <Zap className="w-4 h-4 mr-2" />
-                Launch Idea
-              </Button>
-            </CardContent>
-          </Card>
+          <div key="ideas" className="bg-slate-800 rounded-lg p-4 border border-gray-700">
+            <div className="drag-handle text-cyan-400 font-semibold mb-3 cursor-move flex items-center">
+              <MessageSquare className="w-4 h-4 mr-2" />
+              Quick Idea Drop
+            </div>
+            <Textarea
+              placeholder="Got a wild idea? Drop it here…"
+              value={idea}
+              onChange={(e) => setIdea(e.target.value)}
+              className="w-full h-20 p-3 bg-slate-900 text-gray-100 rounded border border-gray-600 focus:border-cyan-400 outline-none resize-none"
+            />
+            <Button
+              onClick={launchIdea}
+              className="mt-3 px-4 py-2 bg-cyan-600 text-white rounded hover:bg-pink-600 transition-colors"
+              disabled={!idea.trim()}
+            >
+              <Zap className="w-4 h-4 mr-2" />
+              Launch
+            </Button>
+          </div>
 
           {/* Latest Logs */}
-          <Card className="bg-black/40 border-slate-700 backdrop-blur-sm">
-            <CardHeader>
-              <CardTitle className="text-cyan-400 flex items-center">
-                <Activity className="w-5 h-5 mr-2" />
-                Latest Logs
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-2">
-                {logs.map((log) => (
-                  <div key={log.id} className="text-sm">
-                    <span className="text-slate-500">[{log.timestamp}]</span>{" "}
-                    <span className="text-slate-300">{log.message}</span>
+          <div key="logs" className="bg-slate-800 rounded-lg p-4 border border-gray-700">
+            <div className="drag-handle text-cyan-400 font-semibold mb-3 cursor-move flex items-center">
+              <Activity className="w-4 h-4 mr-2" />
+              Latest Logs
+            </div>
+            <div className="overflow-hidden">
+              <div className="space-y-1">
+                {logs.slice(0, 3).map((log) => (
+                  <div key={log.id} className="text-sm text-gray-300">
+                    <span className="text-cyan-400">[{log.timestamp}]</span> {log.message}
                   </div>
                 ))}
               </div>
-            </CardContent>
-          </Card>
+            </div>
+          </div>
 
           {/* Profit Goals Tracker */}
-          <Card className="bg-black/40 border-slate-700 backdrop-blur-sm lg:col-span-3">
-            <CardHeader>
-              <CardTitle className="text-cyan-400 flex items-center">
-                <Target className="w-5 h-5 mr-2" />
-                Profit Goals Tracker
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                <div>
-                  <ul className="space-y-3 mb-4">
-                    <li className="flex justify-between items-center">
-                      <span className="text-slate-300">Hit $50k Q3 Revenue</span>
-                      <input type="checkbox" className="accent-pink-500" />
-                    </li>
-                    <li className="flex justify-between items-center">
-                      <span className="text-slate-300">Launch Referral Loop</span>
-                      <input type="checkbox" className="accent-pink-500" />
-                    </li>
-                    <li className="flex justify-between items-center">
-                      <span className="text-slate-300">Optimize Tax Entity</span>
-                      <input type="checkbox" className="accent-pink-500" />
-                    </li>
-                  </ul>
-                </div>
-                <div className="h-64">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <LineChart data={sampleData} margin={{ top: 5, right: 20, bottom: 5, left: 0 }}>
-                      <Line
-                        type="monotone"
-                        dataKey="profit"
-                        stroke="#00E5CF"
-                        strokeWidth={2}
-                        dot={{ fill: "#00E5CF", strokeWidth: 2 }}
-                      />
-                      <CartesianGrid stroke="#374151" strokeDasharray="3 3" />
-                      <XAxis dataKey="name" stroke="#9CA3AF" />
-                      <YAxis stroke="#9CA3AF" />
-                      <Tooltip
-                        contentStyle={{
-                          backgroundColor: "#1F2937",
-                          borderColor: "#374151",
-                          borderRadius: "8px",
-                        }}
-                        itemStyle={{ color: "#00E5CF" }}
-                        labelStyle={{ color: "#fff" }}
-                      />
-                    </LineChart>
-                  </ResponsiveContainer>
-                </div>
+          <div key="goals" className="bg-slate-800 rounded-lg p-4 border border-gray-700">
+            <div className="drag-handle text-cyan-400 font-semibold mb-3 cursor-move flex items-center">
+              <Target className="w-4 h-4 mr-2" />
+              Profit Goals Tracker
+            </div>
+            <div className="mb-4">
+              <div className="text-2xl font-bold text-white mb-2">
+                Live Profit: <span className="text-green-400">${liveProfit.toLocaleString()}</span>
               </div>
-            </CardContent>
-          </Card>
-        </div>
+            </div>
+            <ul className="space-y-3 text-gray-300 mb-4">
+              <li className="flex justify-between items-center">
+                <span>Hit $50k Q3 Revenue</span>
+                <input type="checkbox" className="accent-pink-500" />
+              </li>
+              <li className="flex justify-between items-center">
+                <span>Launch Referral Loop</span>
+                <input type="checkbox" className="accent-pink-500" />
+              </li>
+              <li className="flex justify-between items-center">
+                <span>Optimize Tax Entity</span>
+                <input type="checkbox" className="accent-pink-500" />
+              </li>
+            </ul>
+            <div className="mt-4">
+              <ResponsiveContainer width="100%" height={150}>
+                <LineChart data={sampleData} margin={{ top: 5, right: 20, bottom: 5, left: 0 }}>
+                  <Line
+                    type="monotone"
+                    dataKey="profit"
+                    stroke="#06b6d4"
+                    strokeWidth={2}
+                    dot={{ fill: "#06b6d4", strokeWidth: 2 }}
+                  />
+                  <CartesianGrid stroke="#555" strokeDasharray="3 3" />
+                  <XAxis dataKey="name" stroke="#888" />
+                  <YAxis stroke="#888" />
+                  <Tooltip
+                    contentStyle={{
+                      backgroundColor: "#1e293b",
+                      borderColor: "#334155",
+                      borderRadius: "8px",
+                    }}
+                    itemStyle={{ color: "#06b6d4" }}
+                    labelStyle={{ color: "#fff" }}
+                  />
+                </LineChart>
+              </ResponsiveContainer>
+            </div>
+          </div>
+        </GridLayout>
       </div>
     </div>
   )
