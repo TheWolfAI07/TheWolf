@@ -3,12 +3,19 @@ import { createClient as createSupabaseClient } from "@supabase/supabase-js"
 // Get environment variables with fallbacks
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || ""
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || ""
-const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || ""
+
+// NEVER access service key on client - only on server
+const getServiceKey = () => {
+  if (typeof window !== "undefined") {
+    throw new Error("Service role key cannot be accessed on the client side")
+  }
+  return process.env.SUPABASE_SERVICE_ROLE_KEY || ""
+}
 
 // Export createClient function as named export
 export const createClient = createSupabaseClient
 
-// Client-side Supabase client (only create if we have the required env vars)
+// Client-side Supabase client (ONLY anon key, NEVER service key)
 export const supabase =
   supabaseUrl && supabaseAnonKey
     ? createSupabaseClient(supabaseUrl, supabaseAnonKey, {
@@ -25,13 +32,32 @@ export const supabase =
       })
     : null
 
-// Server-side client for API routes
-export const createServerSupabaseClient = () => {
+// Safe client-side supabase instance creator
+export const createClientSupabaseClient = () => {
   if (!supabaseUrl || !supabaseAnonKey) {
     throw new Error("Missing Supabase environment variables")
   }
 
-  const serverKey = supabaseServiceKey || supabaseAnonKey
+  return createSupabaseClient(supabaseUrl, supabaseAnonKey, {
+    auth: {
+      persistSession: true,
+      autoRefreshToken: true,
+      detectSessionInUrl: true,
+    },
+  })
+}
+
+// Server-side client for API routes (NEVER use on client)
+export const createServerSupabaseClient = () => {
+  if (typeof window !== "undefined") {
+    throw new Error("createServerSupabaseClient should only be used on the server side")
+  }
+
+  if (!supabaseUrl || !supabaseAnonKey) {
+    throw new Error("Missing Supabase environment variables")
+  }
+
+  const serverKey = getServiceKey() || supabaseAnonKey
 
   return createSupabaseClient(supabaseUrl, serverKey, {
     auth: {
@@ -41,7 +67,7 @@ export const createServerSupabaseClient = () => {
   })
 }
 
-// Connection health check
+// Connection health check (client-safe)
 export const checkSupabaseConnection = async () => {
   try {
     if (!supabase) {
@@ -61,9 +87,13 @@ export const checkSupabaseConnection = async () => {
   }
 }
 
-// Initialize database with your actual Supabase instance
+// Initialize database (server-only function)
 export const initializeDatabase = async () => {
   try {
+    if (typeof window !== "undefined") {
+      throw new Error("initializeDatabase can only be called on the server")
+    }
+
     if (!supabaseUrl || !supabaseAnonKey) {
       return { success: false, error: "Supabase environment variables not configured" }
     }
@@ -80,7 +110,7 @@ export const initializeDatabase = async () => {
   }
 }
 
-// Insert comprehensive demo data
+// Insert comprehensive demo data (server-only)
 async function insertDemoData(client: any) {
   try {
     // Check if demo data already exists

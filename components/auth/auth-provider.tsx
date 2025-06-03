@@ -3,7 +3,7 @@
 import type React from "react"
 import { createContext, useContext, useEffect, useState } from "react"
 import { AuthService, type AuthUser } from "@/lib/auth"
-import { supabase } from "@/lib/supabase"
+import { createClientSupabaseClient } from "@/lib/supabase"
 import { useRouter, usePathname } from "next/navigation"
 
 interface AuthContextType {
@@ -28,7 +28,13 @@ const AuthContext = createContext<AuthContextType>({
   isAuthenticated: false,
 })
 
-export const useAuthContext = () => useContext(AuthContext)
+export const useAuthContext = () => {
+  const context = useContext(AuthContext)
+  if (!context) {
+    throw new Error("useAuthContext must be used within an AuthProvider")
+  }
+  return context
+}
 
 interface AuthProviderProps {
   children: React.ReactNode
@@ -39,6 +45,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [initialLoadComplete, setInitialLoadComplete] = useState(false)
+  const [supabase] = useState(() => createClientSupabaseClient())
   const router = useRouter()
   const pathname = usePathname()
 
@@ -99,7 +106,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     })
 
     return () => subscription.unsubscribe()
-  }, [])
+  }, [supabase])
 
   // Handle protected routes
   useEffect(() => {
