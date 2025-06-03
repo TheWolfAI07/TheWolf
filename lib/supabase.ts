@@ -3,33 +3,12 @@ import { createClient as createSupabaseClient } from "@supabase/supabase-js"
 // Get environment variables with fallbacks
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || ""
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || ""
-// Only access service key on server side
-const supabaseServiceKey = typeof window === "undefined" ? process.env.SUPABASE_SERVICE_ROLE_KEY : undefined
+const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || ""
 
 // Export createClient function as named export
 export const createClient = createSupabaseClient
 
-// Server-side client for API routes (NEVER use on client)
-export const createServerSupabaseClient = () => {
-  if (typeof window !== "undefined") {
-    throw new Error("createServerSupabaseClient should only be used on the server side")
-  }
-
-  if (!supabaseUrl || !supabaseAnonKey) {
-    throw new Error("Missing Supabase environment variables")
-  }
-
-  const serverKey = supabaseServiceKey || supabaseAnonKey
-
-  return createSupabaseClient(supabaseUrl, serverKey, {
-    auth: {
-      autoRefreshToken: false,
-      persistSession: false,
-    },
-  })
-}
-
-// Client-side Supabase client (ONLY use anon key)
+// Client-side Supabase client (only create if we have the required env vars)
 export const supabase =
   supabaseUrl && supabaseAnonKey
     ? createSupabaseClient(supabaseUrl, supabaseAnonKey, {
@@ -46,17 +25,18 @@ export const supabase =
       })
     : null
 
-// Safe client-side supabase instance
-export const createClientSupabaseClient = () => {
+// Server-side client for API routes
+export const createServerSupabaseClient = () => {
   if (!supabaseUrl || !supabaseAnonKey) {
     throw new Error("Missing Supabase environment variables")
   }
 
-  return createSupabaseClient(supabaseUrl, supabaseAnonKey, {
+  const serverKey = supabaseServiceKey || supabaseAnonKey
+
+  return createSupabaseClient(supabaseUrl, serverKey, {
     auth: {
-      persistSession: true,
-      autoRefreshToken: true,
-      detectSessionInUrl: true,
+      autoRefreshToken: false,
+      persistSession: false,
     },
   })
 }
@@ -90,7 +70,7 @@ export const initializeDatabase = async () => {
 
     const client = createServerSupabaseClient()
 
-    // Insert demo data with correct schema
+    // Insert demo data
     await insertDemoData(client)
 
     return { success: true, message: "Database initialized successfully with your Supabase instance" }
@@ -100,7 +80,7 @@ export const initializeDatabase = async () => {
   }
 }
 
-// Insert comprehensive demo data with correct column names
+// Insert comprehensive demo data
 async function insertDemoData(client: any) {
   try {
     // Check if demo data already exists
@@ -120,7 +100,7 @@ async function insertDemoData(client: any) {
       return true
     }
 
-    // Insert demo users
+    // Insert demo users with your actual Supabase
     const { data: userData, error: userError } = await client
       .from("users")
       .insert([
@@ -197,7 +177,7 @@ async function insertDemoData(client: any) {
       }
     }
 
-    // Insert analytics data with correct column names
+    // Insert analytics data
     const { error: analyticsError } = await client.from("wolf_analytics").insert([
       {
         metric_name: "total_users",
@@ -221,22 +201,6 @@ async function insertDemoData(client: any) {
         category: "api",
         comparison_value: 800,
         comparison_label: "vs yesterday",
-        trend: "up",
-      },
-      {
-        metric_name: "revenue",
-        metric_value: 45230,
-        category: "financial",
-        comparison_value: 38900,
-        comparison_label: "vs last month",
-        trend: "up",
-      },
-      {
-        metric_name: "growth_rate",
-        metric_value: 12.5,
-        category: "growth",
-        comparison_value: 8.3,
-        comparison_label: "vs last quarter",
         trend: "up",
       },
     ])

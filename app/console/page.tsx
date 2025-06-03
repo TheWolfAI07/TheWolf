@@ -9,7 +9,20 @@ import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { Separator } from "@/components/ui/separator"
-import { Activity, Database, MessageSquare, Play, RefreshCw, Settings, Terminal, Zap, CheckCircle, XCircle, AlertCircle, BarChart3 } from 'lucide-react'
+import {
+  Activity,
+  Database,
+  MessageSquare,
+  Play,
+  RefreshCw,
+  Settings,
+  Terminal,
+  Zap,
+  CheckCircle,
+  XCircle,
+  AlertCircle,
+  BarChart3,
+} from "lucide-react"
 
 interface APIEndpoint {
   id: string
