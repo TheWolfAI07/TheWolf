@@ -8,18 +8,7 @@ import { Badge } from "@/components/ui/badge"
 import { Progress } from "@/components/ui/progress"
 import { LineChart, Line, CartesianGrid, XAxis, YAxis, Tooltip, ResponsiveContainer } from "recharts"
 import { Target, TrendingUp, Plus, Calendar, DollarSign, CheckCircle, Clock } from "lucide-react"
-import { Navbar } from "@/components/navbar"
-
-// Helper function to format relative time
-function formatDistanceToNow(date: Date): string {
-  const now = new Date()
-  const diffInSeconds = Math.floor((now.getTime() - date.getTime()) / 1000)
-
-  if (diffInSeconds < 60) return `${diffInSeconds} seconds ago`
-  if (diffInSeconds < 3600) return `${Math.floor(diffInSeconds / 60)} minutes ago`
-  if (diffInSeconds < 86400) return `${Math.floor(diffInSeconds / 3600)} hours ago`
-  return `${Math.floor(diffInSeconds / 86400)} days ago`
-}
+import Navbar from "@/components/navbar"
 
 interface Goal {
   id: string
@@ -337,7 +326,7 @@ export default function GoalsPage() {
         ) : filteredGoals.length > 0 ? (
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             {filteredGoals.map((goal) => (
-              <Card key={goal.id} className="bg-black/40 border-slate-700 backdrop-blur-sm">
+              <Card key={goal.id} className="bg-dark-gray border-slate-700">
                 <CardHeader className="pb-2">
                   <div className="flex justify-between items-start">
                     <CardTitle className="text-white flex items-center">
@@ -381,16 +370,16 @@ export default function GoalsPage() {
                         <YAxis stroke="#888" />
                         <Tooltip
                           contentStyle={{ backgroundColor: "#1f2124", borderColor: "#333", borderRadius: "8px" }}
-                          itemStyle={{ color: "#06b6d4" }}
+                          itemStyle={{ color: "var(--turquoise)" }}
                           labelStyle={{ color: "#fff" }}
                           formatter={(value) => [`${value} ${goal.unit}`, "Progress"]}
                         />
                         <Line
                           type="monotone"
                           dataKey="value"
-                          stroke="#06b6d4"
+                          stroke="var(--turquoise)"
                           strokeWidth={2}
-                          dot={{ fill: "#06b6d4", strokeWidth: 2 }}
+                          dot={{ fill: "var(--turquoise)", strokeWidth: 2 }}
                         />
                       </LineChart>
                     </ResponsiveContainer>

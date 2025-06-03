@@ -1,102 +1,67 @@
-import { NextResponse } from "next/server"
+import { type NextRequest, NextResponse } from "next/server"
 import { createServerSupabaseClient } from "@/lib/supabase"
 
-export async function GET() {
+export async function GET(request: NextRequest) {
   try {
+    const { searchParams } = new URL(request.url)
+    const limit = searchParams.get("limit")
+
     const supabase = createServerSupabaseClient()
 
-    const {
-      data: users,
-      error,
-      count,
-    } = await supabase.from("users").select("*", { count: "exact" }).order("created_at", { ascending: false })
+    let query = supabase.from("users").select("*").order("id", { ascending: true })
 
-    if (error) {
-      console.error("Users API error:", error)
-      return NextResponse.json(
-        {
-          success: false,
-          error: error.message,
-          message: "Failed to fetch users from your Supabase database",
-        },
-        { status: 500 },
-      )
+    if (limit) {
+      query = query.limit(Number.parseInt(limit))
     }
+
+    const { data: users, error } = await query
+
+    if (error) throw error
 
     return NextResponse.json({
       success: true,
       data: users || [],
-      total: count || 0,
-      message: `Found ${count || 0} users in your database`,
+      total: users?.length || 0,
+      message: "Users retrieved successfully",
     })
-  } catch (error: any) {
-    console.error("Users API error:", error)
-    return NextResponse.json(
-      {
-        success: false,
-        error: error?.message || "Unknown error",
-        message: "Failed to connect to your Supabase database",
-      },
-      { status: 500 },
-    )
+  } catch (error) {
+    console.error("Users GET error:", error)
+    return NextResponse.json({ success: false, message: "Failed to fetch users" }, { status: 500 })
   }
 }
 
-export async function POST(request: Request) {
+export async function POST(request: NextRequest) {
   try {
     const body = await request.json()
-    const { username, email, role = "user" } = body
+    const { username, status = "active" } = body
 
-    if (!username || !email) {
-      return NextResponse.json(
-        {
-          success: false,
-          error: "Username and email are required",
-        },
-        { status: 400 },
-      )
+    if (!username) {
+      return NextResponse.json({ success: false, message: "Username is required" }, { status: 400 })
     }
 
     const supabase = createServerSupabaseClient()
 
-    const { data: user, error } = await supabase
-      .from("users")
-      .insert([
-        {
-          username,
-          email,
-          role,
-          status: "active",
-          last_login: new Date().toISOString(),
-        },
-      ])
-      .select()
-      .single()
+    // Check if user already exists
+    const { data: existingUser } = await supabase.from("users").select("username").eq("username", username).single()
 
-    if (error) {
-      console.error("User creation error:", error)
-      return NextResponse.json(
-        {
-          success: false,
-          error: error.message,
-        },
-        { status: 500 },
-      )
+    if (existingUser) {
+      return NextResponse.json({ success: false, message: "User with this username already exists" }, { status: 409 })
     }
 
-    return NextResponse.json({
-      success: true,
-      data: user,
-      message: "User created successfully in your Supabase database",
-    })
-  } catch (error: any) {
-    console.error("User creation error:", error)
+    const { data, error } = await supabase.from("users").insert([{ username, status }]).select()
+
+    if (error) throw error
+
     return NextResponse.json(
       {
-        success: false,
-        error: error?.message || "Unknown error",
+        success: true,
+        data: data[0],
+        message: "User created successfully",
       },
-      { status: 500 },
+      { status: 201 },
     )
+  } catch (error) {
+    console.error("Users POST error:", error)
+    return NextResponse.json({ success: false, message: "Failed to create user" }, { status: 500 })
   }
 }

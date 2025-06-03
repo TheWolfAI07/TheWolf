@@ -1,7 +1,7 @@
-import { NextResponse } from "next/server"
+import { type NextRequest, NextResponse } from "next/server"
 import { createServerSupabaseClient } from "@/lib/supabase"
 
-export async function GET(request: Request) {
+export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url)
     const type = searchParams.get("type") || "overview"
@@ -9,66 +9,106 @@ export async function GET(request: Request) {
     const supabase = createServerSupabaseClient()
 
     if (type === "overview") {
-      // Get overview analytics from your Supabase
-      const { data: analytics, error } = await supabase
+      // Get analytics data from wolf_analytics table
+      const { data: analyticsData, error } = await supabase
         .from("wolf_analytics")
+        .select("*")
+        .order("timestamp", { ascending: false })
+
+      if (error) throw error
+
+      // Transform data into overview format
+      const overview = analyticsData.reduce((acc: any, item) => {
+        const key = item.metric_name.toLowerCase().replace(/\s+/g, "")
+        acc[key] = item.metric_value
+        return acc
+      }, {})
+
+      return NextResponse.json({
+        success: true,
+        data: overview,
+        message: "Analytics overview retrieved successfully",
+      })
+    }
+
+    if (type === "projects") {
+      // Get projects data
+      const { data: projects, error } = await supabase
+        .from("wolf_projects")
         .select("*")
         .order("created_at", { ascending: false })
 
-      if (error) {
-        console.error("Analytics API error:", error)
-        return NextResponse.json(
-          {
-            success: false,
-            error: error.message,
-            message: "Failed to fetch analytics from your Supabase database",
-          },
-          { status: 500 },
-        )
-      }
+      if (error) throw error
 
-      // Get user count
-      const { count: userCount } = await supabase.from("users").select("*", { count: "exact", head: true })
+      return NextResponse.json({
+        success: true,
+        data: projects,
+        message: "Projects data retrieved successfully",
+      })
+    }
 
-      // Get project count
-      const { count: projectCount } = await supabase.from("wolf_projects").select("*", { count: "exact", head: true })
-
+    if (type === "activities") {
       // Get recent activities
-      const { data: activities } = await supabase
+      const { data: activities, error } = await supabase
         .from("wolf_activities")
         .select("*")
         .order("created_at", { ascending: false })
         .limit(10)
 
+      if (error) throw error
+
       return NextResponse.json({
         success: true,
-        data: {
-          metrics: analytics || [],
-          summary: {
-            totalUsers: userCount || 0,
-            totalProjects: projectCount || 0,
-            recentActivities: activities || [],
-          },
-          activeSessions: Math.floor(Math.random() * 50) + 10, // Simulated for demo
-        },
-        message: "Analytics data retrieved from your Supabase database",
+        data: activities,
+        message: "Activities retrieved successfully",
       })
     }
 
-    return NextResponse.json({
-      success: true,
-      data: [],
-      message: "Analytics type not implemented yet",
-    })
-  } catch (error: any) {
-    console.error("Analytics API error:", error)
     return NextResponse.json(
       {
         success: false,
-        error: error?.message || "Unknown error",
-        message: "Failed to connect to your Supabase database",
+        message: "Invalid analytics type",
       },
-      { status: 500 },
+      { status: 400 },
     )
+  } catch (error) {
+    console.error("Analytics API error:", error)
+    return NextResponse.json({ success: false, message: "Failed to fetch analytics data" }, { status: 500 })
+  }
+}
+
+export async function POST(request: NextRequest) {
+  try {
+    const body = await request.json()
+    const { metric_name, metric_value, category, comparison_value, comparison_label } = body
+
+    const supabase = createServerSupabaseClient()
+
+    const { data, error } = await supabase
+      .from("wolf_analytics")
+      .insert([
+        {
+          metric_name,
+          metric_value,
+          category,
+          comparison_value,
+          comparison_label,
+        },
+      ])
+      .select()
+
+    if (error) throw error
+
+    return NextResponse.json(
+      {
+        success: true,
+        data: data[0],
+        message: "Analytics metric created successfully",
+      },
+      { status: 201 },
+    )
+  } catch (error) {
+    console.error("Analytics POST error:", error)
+    return NextResponse.json({ success: false, message: "Failed to create analytics metric" }, { status: 500 })
   }
 }
