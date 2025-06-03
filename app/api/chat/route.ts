@@ -1,9 +1,6 @@
 import { NextResponse } from "next/server"
 import { createServerSupabaseClient } from "@/lib/supabase"
 
-// Use a placeholder Vercel URL that can be updated later
-const APP_URL = process.env.NEXT_PUBLIC_APP_URL || "https://wolf-platform.vercel.app"
-
 export async function POST(request: Request) {
   try {
     const body = await request.json()
@@ -163,7 +160,6 @@ async function testAllAPIs() {
     endpoints.map(async (endpoint) => {
       try {
         const startTime = Date.now()
-        // Use relative URLs instead of absolute to avoid CORS issues
         const response = await fetch(`${endpoint.path}`, {
           method: "GET",
           headers: { "Content-Type": "application/json" },

@@ -1,4 +1,4 @@
-import { createClient } from "@supabase/supabase-js"
+import { createClient as createSupabaseClient } from "@supabase/supabase-js"
 
 // Get environment variables from your uploaded .env
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
@@ -14,8 +14,11 @@ if (!supabaseAnonKey) {
   throw new Error("Missing NEXT_PUBLIC_SUPABASE_ANON_KEY environment variable")
 }
 
+// Export createClient function as named export
+export const createClient = createSupabaseClient
+
 // Client-side Supabase client
-export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
+export const supabase = createSupabaseClient(supabaseUrl, supabaseAnonKey, {
   auth: {
     persistSession: true,
     autoRefreshToken: true,
@@ -32,7 +35,7 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
 export const createServerSupabaseClient = () => {
   const serverKey = supabaseServiceKey || supabaseAnonKey
 
-  return createClient(supabaseUrl, serverKey, {
+  return createSupabaseClient(supabaseUrl, serverKey, {
     auth: {
       autoRefreshToken: false,
       persistSession: false,

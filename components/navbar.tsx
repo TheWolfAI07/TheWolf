@@ -42,7 +42,7 @@ const navigation = [
   { name: "Settings", href: "/settings", icon: Settings },
 ]
 
-export default function Navbar() {
+function Navbar() {
   const pathname = usePathname()
   const [isOpen, setIsOpen] = useState(false)
 
@@ -186,3 +186,7 @@ export default function Navbar() {
     </nav>
   )
 }
+
+// Export both as default and named export
+export default Navbar
+export { Navbar }
