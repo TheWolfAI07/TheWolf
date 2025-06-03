@@ -2,8 +2,8 @@ import { ethers } from "ethers"
 
 export interface WalletConnection {
   address: string
-  provider: ethers.providers.Web3Provider
-  signer: ethers.Signer
+  provider: ethers.BrowserProvider
+  signer: ethers.JsonRpcSigner
   chainId: number
   balance: string
   ensName?: string
@@ -67,10 +67,10 @@ export class WalletConnector {
         throw new Error("No accounts found. Please unlock MetaMask and try again.")
       }
 
-      const provider = new ethers.providers.Web3Provider(window.ethereum, "any")
+      const provider = new ethers.BrowserProvider(window.ethereum)
       await provider.ready
 
-      const signer = provider.getSigner()
+      const signer = await provider.getSigner()
       const address = await signer.getAddress()
       const network = await provider.getNetwork()
       const balance = await provider.getBalance(address)
@@ -78,7 +78,7 @@ export class WalletConnector {
       // Try to get ENS name
       let ensName: string | undefined
       try {
-        if (network.chainId === 1) {
+        if (Number(network.chainId) === 1) {
           ensName = (await provider.lookupAddress(address)) || undefined
         }
       } catch (error) {
@@ -89,8 +89,8 @@ export class WalletConnector {
         address,
         provider,
         signer,
-        chainId: network.chainId,
-        balance: ethers.utils.formatEther(balance),
+        chainId: Number(network.chainId),
+        balance: ethers.formatEther(balance),
         ensName,
       }
 
@@ -187,8 +187,8 @@ export class WalletConnector {
     if (!this.connection || !window.ethereum) return
 
     try {
-      const provider = new ethers.providers.Web3Provider(window.ethereum, "any")
-      const signer = provider.getSigner()
+      const provider = new ethers.BrowserProvider(window.ethereum)
+      const signer = await provider.getSigner()
       const address = await signer.getAddress()
       const network = await provider.getNetwork()
       const balance = await provider.getBalance(address)
@@ -196,7 +196,7 @@ export class WalletConnector {
       // Try to get ENS name
       let ensName: string | undefined
       try {
-        if (network.chainId === 1) {
+        if (Number(network.chainId) === 1) {
           ensName = (await provider.lookupAddress(address)) || undefined
         }
       } catch (error) {
@@ -207,8 +207,8 @@ export class WalletConnector {
         address,
         provider,
         signer,
-        chainId: network.chainId,
-        balance: ethers.utils.formatEther(balance),
+        chainId: Number(network.chainId),
+        balance: ethers.formatEther(balance),
         ensName,
       }
 
@@ -250,10 +250,10 @@ export class WalletConnector {
     }
 
     // Validate addresses
-    if (!ethers.utils.isAddress(tokenAddress)) {
+    if (!ethers.isAddress(tokenAddress)) {
       throw new Error("Invalid token address")
     }
-    if (!ethers.utils.isAddress(userAddress)) {
+    if (!ethers.isAddress(userAddress)) {
       throw new Error("Invalid user address")
     }
 
@@ -275,13 +275,13 @@ export class WalletConnector {
         tokenContract.name(),
       ])
 
-      const balanceFormatted = ethers.utils.formatUnits(balance, decimals)
+      const balanceFormatted = ethers.formatUnits(balance, decimals)
 
       // Only fetch price if balance > 0
       let priceUSD = 0
       let valueUSD = 0
 
-      if (!balance.isZero()) {
+      if (balance > 0n) {
         priceUSD = await this.getTokenPrice(symbol)
         valueUSD = Number.parseFloat(balanceFormatted) * priceUSD
       }
@@ -290,7 +290,7 @@ export class WalletConnector {
         address: tokenAddress,
         symbol,
         name,
-        decimals,
+        decimals: Number(decimals),
         balance: balance.toString(),
         balanceFormatted,
         priceUSD,

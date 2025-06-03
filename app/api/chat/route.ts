@@ -1,5 +1,4 @@
 import { NextResponse } from "next/server"
-import { createServerSupabaseClient } from "@/lib/supabase"
 
 export async function POST(request: Request) {
   try {
@@ -189,11 +188,24 @@ async function testAllAPIs() {
 }
 
 async function getDatabaseInfo() {
+  // Only try to access database if environment variables are available
   if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY) {
-    throw new Error("Database not configured")
+    return {
+      tables: [
+        { name: "users", count: 0 },
+        { name: "wolf_projects", count: 0 },
+        { name: "wolf_analytics", count: 0 },
+        { name: "wolf_activities", count: 0 },
+        { name: "wolf_settings", count: 0 },
+      ],
+      totalRecords: 0,
+    }
   }
 
-  const supabase = createServerSupabaseClient()
+  // Import Supabase dynamically to avoid build-time errors
+  const { createClient } = await import("@supabase/supabase-js")
+  const supabase = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY)
+
   const tables = ["users", "wolf_projects", "wolf_analytics", "wolf_activities", "wolf_settings"]
   const tableInfo = []
   let totalRecords = 0
@@ -224,7 +236,8 @@ async function getSystemStatus() {
 
   if (hasSupabaseConfig) {
     try {
-      const supabase = createServerSupabaseClient()
+      const { createClient } = await import("@supabase/supabase-js")
+      const supabase = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY)
       const { data: dbTest } = await supabase.from("users").select("count(*)", { count: "exact", head: true })
       dbStatus = dbTest ? "Connected" : "Error"
 
@@ -246,7 +259,8 @@ async function getSystemStatus() {
 
 async function logChatMessage(message: string, response: any) {
   try {
-    const supabase = createServerSupabaseClient()
+    const { createClient } = await import("@supabase/supabase-js")
+    const supabase = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!)
 
     const { error } = await supabase.from("wolf_chat_messages").insert([
       {
