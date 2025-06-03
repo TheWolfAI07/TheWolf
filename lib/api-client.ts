@@ -1,13 +1,5 @@
-/**
- * Wolf Platform API Client
- *
- * Centralized API client for making requests to internal and external endpoints
- */
-
-import { config } from "./config"
 import { logger } from "./logger"
 
-// Request options interface
 export interface ApiRequestOptions extends RequestInit {
   params?: Record<string, string | number | boolean | undefined | null>
   timeout?: number
@@ -15,7 +7,6 @@ export interface ApiRequestOptions extends RequestInit {
   retryDelay?: number
 }
 
-// Response interface
 export interface ApiResponse<T = any> {
   data: T | null
   error: Error | null
@@ -24,7 +15,6 @@ export interface ApiResponse<T = any> {
   success: boolean
 }
 
-// Error interface
 export class ApiError extends Error {
   status: number
   data?: any
@@ -37,7 +27,6 @@ export class ApiError extends Error {
   }
 }
 
-// Build URL with query parameters
 const buildUrl = (url: string, params?: Record<string, any>): string => {
   if (!params) return url
 
@@ -49,9 +38,8 @@ const buildUrl = (url: string, params?: Record<string, any>): string => {
   return queryParams ? `${url}${url.includes("?") ? "&" : "?"}${queryParams}` : url
 }
 
-// Create fetch request with timeout
 const fetchWithTimeout = async (url: string, options: RequestInit & { timeout?: number }): Promise<Response> => {
-  const { timeout = config.api.timeout, ...fetchOptions } = options
+  const { timeout = 10000, ...fetchOptions } = options
 
   const controller = new AbortController()
   const timeoutId = setTimeout(() => controller.abort(), timeout)
@@ -67,12 +55,11 @@ const fetchWithTimeout = async (url: string, options: RequestInit & { timeout?: 
   }
 }
 
-// Retry logic for failed requests
 const fetchWithRetry = async (
   url: string,
   options: RequestInit & { timeout?: number; retries?: number; retryDelay?: number },
 ): Promise<Response> => {
-  const { retries = config.api.retries, retryDelay = 1000, ...fetchOptions } = options
+  const { retries = 2, retryDelay = 1000, ...fetchOptions } = options
 
   let lastError: Error | null = null
 
@@ -82,12 +69,10 @@ const fetchWithRetry = async (
     } catch (error: any) {
       lastError = error
 
-      // Don't retry if we've reached the max retries or if it's an abort error
       if (attempt >= retries || error.name === "AbortError") {
         throw error
       }
 
-      // Wait before retrying
       await new Promise((resolve) => setTimeout(resolve, retryDelay * Math.pow(2, attempt)))
     }
   }
@@ -95,10 +80,7 @@ const fetchWithRetry = async (
   throw lastError || new Error("Request failed")
 }
 
-// Process response - FIXED SYNTAX\
-const processResponse = async <T>(response: Response)
-: Promise<ApiResponse<T>> =>
-{
+async function processResponse<T>(response: Response): Promise<ApiResponse<T>> {
   const headers = response.headers
   const status = response.status
 
@@ -139,9 +121,7 @@ const processResponse = async <T>(response: Response)
   }
 }
 
-// Main API client
 export const apiClient = {
-  // GET request
   async get<T = any>(url: string, options: ApiRequestOptions = {}): Promise<ApiResponse<T>> {
     const { params, ...fetchOptions } = options
     const fullUrl = buildUrl(url, params)
@@ -166,7 +146,6 @@ export const apiClient = {
     }
   },
 
-  // POST request
   async post<T = any>(url: string, data?: any, options: ApiRequestOptions = {}): Promise<ApiResponse<T>> {
     const { params, ...fetchOptions } = options
     const fullUrl = buildUrl(url, params)
@@ -196,7 +175,6 @@ export const apiClient = {
     }
   },
 
-  // PUT request
   async put<T = any>(url: string, data?: any, options: ApiRequestOptions = {}): Promise<ApiResponse<T>> {
     const { params, ...fetchOptions } = options
     const fullUrl = buildUrl(url, params)
@@ -226,7 +204,6 @@ export const apiClient = {
     }
   },
 
-  // DELETE request
   async delete<T = any>(url: string, options: ApiRequestOptions = {}): Promise<ApiResponse<T>> {
     const { params, ...fetchOptions } = options
     const fullUrl = buildUrl(url, params)

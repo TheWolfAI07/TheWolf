@@ -40,37 +40,37 @@
   }
 
   .dark {
-    --background: 222.2 84% 4.9%;
-    --foreground: 210 40% 98%;
-    --card: 222.2 84% 4.9%;
-    --card-foreground: 210 40% 98%;
-    --popover: 222.2 84% 4.9%;
-    --popover-foreground: 210 40% 98%;
-    --primary: 210 40% 98%;
-    --primary-foreground: 222.2 47.4% 11.2%;
-    --secondary: 217.2 32.6% 17.5%;
-    --secondary-foreground: 210 40% 98%;
-    --muted: 217.2 32.6% 17.5%;
-    --muted-foreground: 215 20.2% 65.1%;
-    --accent: 217.2 32.6% 17.5%;
-    --accent-foreground: 210 40% 98%;
+    --background: 0 0% 3.9%;
+    --foreground: 0 0% 98%;
+    --card: 0 0% 3.9%;
+    --card-foreground: 0 0% 98%;
+    --popover: 0 0% 3.9%;
+    --popover-foreground: 0 0% 98%;
+    --primary: 0 0% 98%;
+    --primary-foreground: 0 0% 9%;
+    --secondary: 0 0% 14.9%;
+    --secondary-foreground: 0 0% 98%;
+    --muted: 0 0% 14.9%;
+    --muted-foreground: 0 0% 63.9%;
+    --accent: 0 0% 14.9%;
+    --accent-foreground: 0 0% 98%;
     --destructive: 0 62.8% 30.6%;
-    --destructive-foreground: 210 40% 98%;
-    --border: 217.2 32.6% 17.5%;
-    --input: 217.2 32.6% 17.5%;
-    --ring: 212.7 26.8% 83.9%;
+    --destructive-foreground: 0 0% 98%;
+    --border: 0 0% 14.9%;
+    --input: 0 0% 14.9%;
+    --ring: 0 0% 83.1%;
     --chart-1: 220 70% 50%;
     --chart-2: 160 60% 45%;
     --chart-3: 30 80% 55%;
     --chart-4: 280 65% 60%;
     --chart-5: 340 75% 55%;
-    --sidebar-background: 240 5.9% 10%;
-    --sidebar-foreground: 240 4.8% 95.9%;
+    --sidebar-background: 0 0% 3.9%;
+    --sidebar-foreground: 0 0% 98%;
     --sidebar-primary: 0 0% 98%;
-    --sidebar-primary-foreground: 240 5.9% 10%;
-    --sidebar-accent: 240 3.7% 15.9%;
-    --sidebar-accent-foreground: 240 4.8% 95.9%;
-    --sidebar-border: 240 3.7% 15.9%;
+    --sidebar-primary-foreground: 0 0% 9%;
+    --sidebar-accent: 0 0% 14.9%;
+    --sidebar-accent-foreground: 0 0% 98%;
+    --sidebar-border: 0 0% 14.9%;
     --sidebar-ring: 217.2 91.2% 59.8%;
   }
 }
@@ -84,14 +84,188 @@
   }
 }
 
-/* Custom Wolf Theme Colors */
+/* Luxury Wolf Theme Colors */
 :root {
-  --turquoise: #00e5cf;
-  --pink: #ec4899;
-  --yellow: #fde047;
-  --aqua: #06b6d4;
-  --dark-gray: #1f2124;
-  --gunmetal: #2a2d31;
+  --luxury-black: #0a0a0a;
+  --gunmetal: #2c3e50;
+  --dark-gunmetal: #1a252f;
+  --shiny-gunmetal: #34495e;
+  --aqua: #00e5cf;
+  --turquoise: #1dd1a1;
+  --luxury-gold: #ffd700;
+  --gold-accent: #ffb347;
+  --gold-dust: #fff8dc;
+}
+
+/* Luxury Gradients */
+.bg-luxury-dark {
+  background: linear-gradient(135deg, var(--luxury-black) 0%, var(--dark-gunmetal) 50%, var(--gunmetal) 100%);
+}
+
+.bg-gunmetal-gradient {
+  background: linear-gradient(135deg, var(--dark-gunmetal) 0%, var(--shiny-gunmetal) 100%);
+}
+
+.bg-aqua-gradient {
+  background: linear-gradient(135deg, var(--turquoise) 0%, var(--aqua) 100%);
+}
+
+.bg-gold-gradient {
+  background: linear-gradient(135deg, var(--gold-accent) 0%, var(--luxury-gold) 100%);
+}
+
+/* Gold Dust Animation */
+@keyframes goldDust {
+  0% {
+    opacity: 0;
+    transform: translateY(20px) scale(0);
+  }
+  50% {
+    opacity: 1;
+    transform: translateY(-10px) scale(1);
+  }
+  100% {
+    opacity: 0;
+    transform: translateY(-30px) scale(0);
+  }
+}
+
+.gold-dust {
+  position: relative;
+  overflow: hidden;
+}
+
+.gold-dust::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-image: radial-gradient(2px 2px at 20px 30px, var(--luxury-gold), transparent),
+    radial-gradient(2px 2px at 40px 70px, var(--gold-accent), transparent),
+    radial-gradient(1px 1px at 90px 40px, var(--luxury-gold), transparent),
+    radial-gradient(1px 1px at 130px 80px, var(--gold-accent), transparent),
+    radial-gradient(2px 2px at 160px 30px, var(--luxury-gold), transparent);
+  background-repeat: repeat;
+  background-size: 200px 100px;
+  animation: goldDust 4s ease-in-out infinite;
+  pointer-events: none;
+  opacity: 0.3;
+}
+
+/* Shiny Metallic Effects */
+.metallic-shine {
+  position: relative;
+  overflow: hidden;
+}
+
+.metallic-shine::after {
+  content: "";
+  position: absolute;
+  top: -50%;
+  left: -50%;
+  width: 200%;
+  height: 200%;
+  background: linear-gradient(45deg, transparent 30%, rgba(255, 255, 255, 0.1) 50%, transparent 70%);
+  transform: rotate(45deg);
+  animation: shine 3s ease-in-out infinite;
+}
+
+@keyframes shine {
+  0% {
+    transform: translateX(-100%) translateY(-100%) rotate(45deg);
+  }
+  50% {
+    transform: translateX(0%) translateY(0%) rotate(45deg);
+  }
+  100% {
+    transform: translateX(100%) translateY(100%) rotate(45deg);
+  }
+}
+
+/* Aqua Glow Effects */
+.aqua-glow {
+  box-shadow: 0 0 20px rgba(0, 229, 207, 0.3);
+  border: 1px solid var(--aqua);
+}
+
+.aqua-glow:hover {
+  box-shadow: 0 0 30px rgba(0, 229, 207, 0.5);
+  transform: translateY(-2px);
+  transition: all 0.3s ease;
+}
+
+/* Gold Border Effects */
+.gold-border {
+  border: 2px solid var(--luxury-gold);
+  box-shadow: 0 0 15px rgba(255, 215, 0, 0.3);
+}
+
+.gold-border:hover {
+  box-shadow: 0 0 25px rgba(255, 215, 0, 0.5);
+  transform: scale(1.02);
+  transition: all 0.3s ease;
+}
+
+/* Text Effects */
+.text-aqua {
+  color: var(--aqua);
+  text-shadow: 0 0 10px rgba(0, 229, 207, 0.5);
+}
+
+.text-gold {
+  color: var(--luxury-gold);
+  text-shadow: 0 0 10px rgba(255, 215, 0, 0.5);
+}
+
+.text-gunmetal {
+  color: var(--shiny-gunmetal);
+}
+
+/* Luxury Card Styles */
+.luxury-card {
+  background: linear-gradient(135deg, var(--dark-gunmetal) 0%, var(--gunmetal) 100%);
+  border: 1px solid var(--aqua);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3), 0 0 20px rgba(0, 229, 207, 0.1);
+}
+
+.luxury-card:hover {
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.4), 0 0 30px rgba(0, 229, 207, 0.2);
+  transform: translateY(-4px);
+  transition: all 0.3s ease;
+}
+
+/* Premium Button Styles */
+.btn-luxury {
+  background: linear-gradient(135deg, var(--aqua) 0%, var(--turquoise) 100%);
+  border: 2px solid var(--luxury-gold);
+  color: var(--luxury-black);
+  font-weight: 600;
+  text-shadow: none;
+  box-shadow: 0 4px 15px rgba(0, 229, 207, 0.3);
+}
+
+.btn-luxury:hover {
+  background: linear-gradient(135deg, var(--turquoise) 0%, var(--aqua) 100%);
+  box-shadow: 0 6px 20px rgba(0, 229, 207, 0.4);
+  transform: translateY(-2px);
+  transition: all 0.3s ease;
+}
+
+.btn-gold {
+  background: linear-gradient(135deg, var(--luxury-gold) 0%, var(--gold-accent) 100%);
+  border: 2px solid var(--aqua);
+  color: var(--luxury-black);
+  font-weight: 600;
+  box-shadow: 0 4px 15px rgba(255, 215, 0, 0.3);
+}
+
+.btn-gold:hover {
+  background: linear-gradient(135deg, var(--gold-accent) 0%, var(--luxury-gold) 100%);
+  box-shadow: 0 6px 20px rgba(255, 215, 0, 0.4);
+  transform: translateY(-2px);
+  transition: all 0.3s ease;
 }
 
 /* Grid Layout Styles */
@@ -138,46 +312,34 @@
   animation: marquee 15s linear infinite;
 }
 
-/* Wolf Theme Utilities */
-.text-turquoise {
-  color: var(--turquoise);
-}
-.text-pink {
-  color: var(--pink);
-}
-.text-yellow {
-  color: var(--yellow);
-}
-.text-aqua {
-  color: var(--aqua);
-}
-.bg-dark-gray {
-  background-color: var(--dark-gray);
+/* Utility Classes */
+.bg-luxury-black {
+  background-color: var(--luxury-black);
 }
 .bg-gunmetal {
   background-color: var(--gunmetal);
 }
+.bg-dark-gunmetal {
+  background-color: var(--dark-gunmetal);
+}
+.bg-shiny-gunmetal {
+  background-color: var(--shiny-gunmetal);
+}
+.bg-aqua {
+  background-color: var(--aqua);
+}
 .bg-turquoise {
   background-color: var(--turquoise);
 }
-.bg-pink {
-  background-color: var(--pink);
+.bg-luxury-gold {
+  background-color: var(--luxury-gold);
 }
-.border-turquoise {
-  border-color: var(--turquoise);
+.border-aqua {
+  border-color: var(--aqua);
 }
-.border-pink {
-  border-color: var(--pink);
+.border-gold {
+  border-color: var(--luxury-gold);
 }
-.hover\:bg-pink:hover {
-  background-color: var(--pink);
-}
-.hover\:text-pink:hover {
-  color: var(--pink);
-}
-.focus\:border-turquoise:focus {
-  border-color: var(--turquoise);
-}
-.accent-pink {
-  accent-color: var(--pink);
+.border-gunmetal {
+  border-color: var(--gunmetal);
 }

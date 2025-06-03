@@ -32,9 +32,9 @@ export const config = {
 
   // API endpoints
   api: {
-    baseUrl: process.env.NEXT_PUBLIC_APP_URL || "",
-    timeout: 30000, // 30 seconds
-    retries: 3,
+    baseUrl: process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000",
+    timeout: 10000, // 30 seconds
+    retries: 2,
   },
 
   // Database settings
@@ -48,9 +48,10 @@ export const config = {
 
   // Authentication settings
   auth: {
-    sessionTimeout: 86400, // 24 hours in seconds
+    sessionTimeout: 3600, // 24 hours in seconds
     refreshInterval: 3600, // 1 hour in seconds
     passwordMinLength: 8,
+    maxLoginAttempts: 5,
   },
 
   // Feature flags
@@ -59,6 +60,9 @@ export const config = {
     realtime: true,
     analytics: true,
     notifications: true,
+    enableAnalytics: true,
+    enableRealtime: true,
+    enableAI: true,
   },
 
   // Security settings

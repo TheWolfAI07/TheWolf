@@ -1,20 +1,13 @@
 /**
- * Wolf Platform Logging System
+ * Wolf Platform Logger
  *
- * Centralized logging with multiple output targets and severity levels
+ * Production-grade logging system with multiple levels and outputs
  */
 
 import { config } from "./config"
-import { supabase } from "./supabase"
 
 // Log levels
-export enum LogLevel {
-  DEBUG = "debug",
-  INFO = "info",
-  WARN = "warn",
-  ERROR = "error",
-  CRITICAL = "critical",
-}
+export type LogLevel = "debug" | "info" | "warn" | "error" | "critical"
 
 // Log entry interface
 export interface LogEntry {
@@ -22,140 +15,156 @@ export interface LogEntry {
   message: string
   context?: Record<string, any>
   timestamp: string
-  source: string
+  source?: string
 }
 
-// Logger configuration
-const loggerConfig = {
-  minLevel: config.logging.level as LogLevel,
-  enableConsole: config.logging.enableConsole,
-  enableDatabase: config.logging.enableDatabase,
-}
+// Logger class
+class Logger {
+  private logLevel: LogLevel
+  private enableConsole: boolean
+  private enableDatabase: boolean
 
-// Log level numeric values for comparison
-const logLevelValues: Record<LogLevel, number> = {
-  [LogLevel.DEBUG]: 0,
-  [LogLevel.INFO]: 1,
-  [LogLevel.WARN]: 2,
-  [LogLevel.ERROR]: 3,
-  [LogLevel.CRITICAL]: 4,
-}
+  constructor() {
+    this.logLevel = (config.logging?.level as LogLevel) || "info"
+    this.enableConsole = config.logging?.enableConsole ?? true
+    this.enableDatabase = config.logging?.enableDatabase ?? false
+  }
 
-// Check if a log level should be processed
-const shouldLog = (level: LogLevel): boolean => {
-  return logLevelValues[level] >= logLevelValues[loggerConfig.minLevel]
-}
+  private shouldLog(level: LogLevel): boolean {
+    const levels: LogLevel[] = ["debug", "info", "warn", "error", "critical"]
+    const currentLevelIndex = levels.indexOf(this.logLevel)
+    const messageLevelIndex = levels.indexOf(level)
+    return messageLevelIndex >= currentLevelIndex
+  }
 
-// Format context object for logging
-const formatContext = (context?: Record<string, any>): string => {
-  if (!context) return ""
-  try {
-    return JSON.stringify(context)
-  } catch (error) {
-    return "[Unserializable context]"
+  private formatMessage(level: LogLevel, message: string, context?: Record<string, any>): string {
+    const timestamp = new Date().toISOString()
+    const emoji = this.getLevelEmoji(level)
+    const contextStr = context ? ` ${JSON.stringify(context)}` : ""
+    return `${emoji} [${timestamp}] ${level.toUpperCase()}: ${message}${contextStr}`
+  }
+
+  private getLevelEmoji(level: LogLevel): string {
+    switch (level) {
+      case "debug":
+        return "🔍"
+      case "info":
+        return "ℹ️"
+      case "warn":
+        return "⚠️"
+      case "error":
+        return "❌"
+      case "critical":
+        return "🚨"
+      default:
+        return "📝"
+    }
+  }
+
+  private log(level: LogLevel, message: string, context?: Record<string, any>, source?: string): void {
+    if (!this.shouldLog(level)) return
+
+    const logEntry: LogEntry = {
+      level,
+      message,
+      context,
+      timestamp: new Date().toISOString(),
+      source,
+    }
+
+    // Console logging
+    if (this.enableConsole) {
+      const formattedMessage = this.formatMessage(level, message, context)
+
+      switch (level) {
+        case "debug":
+          console.debug(formattedMessage)
+          break
+        case "info":
+          console.info(formattedMessage)
+          break
+        case "warn":
+          console.warn(formattedMessage)
+          break
+        case "error":
+        case "critical":
+          console.error(formattedMessage)
+          break
+        default:
+          console.log(formattedMessage)
+      }
+    }
+
+    // Database logging (if enabled and available)
+    if (this.enableDatabase && typeof window === "undefined") {
+      this.logToDatabase(logEntry).catch((error) => {
+        console.error("Failed to log to database:", error)
+      })
+    }
+  }
+
+  private async logToDatabase(logEntry: LogEntry): Promise<void> {
+    try {
+      // Only import on server side
+      const { createServerSupabaseClient } = await import("./supabase")
+      const supabase = createServerSupabaseClient()
+
+      await supabase.from("wolf_logs").insert([
+        {
+          level: logEntry.level,
+          message: logEntry.message,
+          context: logEntry.context || {},
+          source: logEntry.source || "unknown",
+          created_at: logEntry.timestamp,
+        },
+      ])
+    } catch (error) {
+      // Silently fail database logging to avoid infinite loops
+      console.warn("Database logging failed:", error)
+    }
+  }
+
+  // Public logging methods
+  debug(message: string, context?: Record<string, any>, source?: string): void {
+    this.log("debug", message, context, source)
+  }
+
+  info(message: string, context?: Record<string, any>, source?: string): void {
+    this.log("info", message, context, source)
+  }
+
+  warn(message: string, context?: Record<string, any>, source?: string): void {
+    this.log("warn", message, context, source)
+  }
+
+  error(message: string, context?: Record<string, any>, source?: string): void {
+    this.log("error", message, context, source)
+  }
+
+  critical(message: string, context?: Record<string, any>, source?: string): void {
+    this.log("critical", message, context, source)
+  }
+
+  // Utility methods
+  setLevel(level: LogLevel): void {
+    this.logLevel = level
+  }
+
+  getLevel(): LogLevel {
+    return this.logLevel
+  }
+
+  enableConsoleLogging(enable: boolean): void {
+    this.enableConsole = enable
+  }
+
+  enableDatabaseLogging(enable: boolean): void {
+    this.enableDatabase = enable
   }
 }
 
-// Log to console with appropriate styling
-const logToConsole = (entry: LogEntry): void => {
-  if (!loggerConfig.enableConsole) return
+// Export singleton instance
+export const logger = new Logger()
 
-  const timestamp = new Date(entry.timestamp).toISOString()
-  const contextStr = entry.context ? formatContext(entry.context) : ""
-
-  const styles: Record<LogLevel, string[]> = {
-    [LogLevel.DEBUG]: ["color: gray"],
-    [LogLevel.INFO]: ["color: blue"],
-    [LogLevel.WARN]: ["color: orange", "font-weight: bold"],
-    [LogLevel.ERROR]: ["color: red", "font-weight: bold"],
-    [LogLevel.CRITICAL]: ["color: white", "background-color: red", "font-weight: bold"],
-  }
-
-  const style = styles[entry.level] || []
-
-  if (typeof window !== "undefined") {
-    // Browser environment
-    console[
-      entry.level === LogLevel.ERROR || entry.level === LogLevel.CRITICAL
-        ? "error"
-        : entry.level === LogLevel.WARN
-          ? "warn"
-          : entry.level === LogLevel.INFO
-            ? "info"
-            : "log"
-    ](
-      `%c[${entry.level.toUpperCase()}] [${timestamp}] [${entry.source}]: ${entry.message}`,
-      style.join(";"),
-      contextStr ? entry.context : "",
-    )
-  } else {
-    // Node.js environment
-    console[
-      entry.level === LogLevel.ERROR || entry.level === LogLevel.CRITICAL
-        ? "error"
-        : entry.level === LogLevel.WARN
-          ? "warn"
-          : entry.level === LogLevel.INFO
-            ? "info"
-            : "log"
-    ](`[${entry.level.toUpperCase()}] [${timestamp}] [${entry.source}]: ${entry.message}`, contextStr)
-  }
-}
-
-// Log to database
-const logToDatabase = async (entry: LogEntry): Promise<void> => {
-  if (!loggerConfig.enableDatabase || !supabase) return
-
-  try {
-    await supabase.from("wolf_logs").insert([
-      {
-        level: entry.level,
-        message: entry.message,
-        context: entry.context || {},
-        source: entry.source,
-        created_at: entry.timestamp,
-      },
-    ])
-  } catch (error) {
-    // Fallback to console if database logging fails
-    console.error("Failed to log to database:", error)
-  }
-}
-
-// Main logging function
-const log = async (level: LogLevel, message: string, context?: Record<string, any>, source = "app"): Promise<void> => {
-  if (!shouldLog(level)) return
-
-  const entry: LogEntry = {
-    level,
-    message,
-    context,
-    timestamp: new Date().toISOString(),
-    source,
-  }
-
-  // Log to enabled targets
-  logToConsole(entry)
-
-  if (loggerConfig.enableDatabase) {
-    await logToDatabase(entry)
-  }
-}
-
-// Export logger methods
-export const logger = {
-  debug: (message: string, context?: Record<string, any>, source?: string) =>
-    log(LogLevel.DEBUG, message, context, source),
-
-  info: (message: string, context?: Record<string, any>, source?: string) =>
-    log(LogLevel.INFO, message, context, source),
-
-  warn: (message: string, context?: Record<string, any>, source?: string) =>
-    log(LogLevel.WARN, message, context, source),
-
-  error: (message: string, context?: Record<string, any>, source?: string) =>
-    log(LogLevel.ERROR, message, context, source),
-
-  critical: (message: string, context?: Record<string, any>, source?: string) =>
-    log(LogLevel.CRITICAL, message, context, source),
-}
+// Export for convenience
+export default logger

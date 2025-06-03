@@ -28,6 +28,7 @@ import {
   Lightbulb,
   Activity,
   Bitcoin,
+  Crown,
 } from "lucide-react"
 
 const navigation = [
@@ -48,14 +49,20 @@ export function Navbar() {
   const isActive = (href: string) => pathname === href
 
   return (
-    <nav className="bg-background border-b border-border">
+    <nav className="bg-luxury-dark border-b border-aqua/20 metallic-shine">
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
         <div className="flex h-16 justify-between">
           <div className="flex">
             <div className="flex flex-shrink-0 items-center">
-              <Link href="/" className="flex items-center space-x-2">
-                <Zap className="h-8 w-8 text-primary" />
-                <span className="text-xl font-bold">Wolf Platform</span>
+              <Link href="/" className="flex items-center space-x-3 group">
+                <div className="relative">
+                  <Zap className="h-8 w-8 text-aqua group-hover:text-luxury-gold transition-colors duration-300" />
+                  <Crown className="h-4 w-4 text-luxury-gold absolute -top-1 -right-1" />
+                </div>
+                <span className="text-xl font-bold bg-gradient-to-r from-aqua to-luxury-gold bg-clip-text text-transparent">
+                  Wolf Platform
+                </span>
+                <Badge className="bg-gold-gradient text-luxury-black text-xs font-semibold">LUXURY</Badge>
               </Link>
             </div>
             <div className="hidden sm:ml-6 sm:flex sm:space-x-8">
@@ -65,10 +72,10 @@ export function Navbar() {
                   <Link
                     key={item.name}
                     href={item.href}
-                    className={`inline-flex items-center px-1 pt-1 text-sm font-medium border-b-2 transition-colors ${
+                    className={`inline-flex items-center px-1 pt-1 text-sm font-medium border-b-2 transition-all duration-300 ${
                       isActive(item.href)
-                        ? "border-primary text-primary"
-                        : "border-transparent text-muted-foreground hover:border-gray-300 hover:text-foreground"
+                        ? "border-luxury-gold text-aqua shadow-lg"
+                        : "border-transparent text-gray-300 hover:border-aqua/50 hover:text-aqua"
                     }`}
                   >
                     <Icon className="h-4 w-4 mr-2" />
@@ -79,40 +86,40 @@ export function Navbar() {
             </div>
           </div>
           <div className="hidden sm:ml-6 sm:flex sm:items-center space-x-4">
-            <Badge variant="outline" className="text-xs">
-              Live
+            <Badge className="bg-aqua-gradient text-luxury-black text-xs font-semibold px-3 py-1 aqua-glow">
+              ● LIVE
             </Badge>
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button variant="ghost" className="relative h-8 w-8 rounded-full">
+                <Button variant="ghost" className="relative h-8 w-8 rounded-full gold-border">
                   <Avatar className="h-8 w-8">
                     <AvatarImage src="/avatars/01.png" alt="@user" />
-                    <AvatarFallback>WU</AvatarFallback>
+                    <AvatarFallback className="bg-gunmetal-gradient text-aqua font-bold">WU</AvatarFallback>
                   </Avatar>
                 </Button>
               </DropdownMenuTrigger>
-              <DropdownMenuContent className="w-56" align="end" forceMount>
+              <DropdownMenuContent className="w-56 bg-luxury-dark border-aqua/30" align="end" forceMount>
                 <DropdownMenuLabel className="font-normal">
                   <div className="flex flex-col space-y-1">
-                    <p className="text-sm font-medium leading-none">Wolf User</p>
-                    <p className="text-xs leading-none text-muted-foreground">user@wolf.com</p>
+                    <p className="text-sm font-medium leading-none text-aqua">Wolf User</p>
+                    <p className="text-xs leading-none text-gray-400">user@wolf.com</p>
                   </div>
                 </DropdownMenuLabel>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem asChild>
-                  <Link href="/dashboard" className="flex items-center">
+                <DropdownMenuSeparator className="bg-aqua/20" />
+                <DropdownMenuItem asChild className="hover:bg-gunmetal/50">
+                  <Link href="/dashboard" className="flex items-center text-gray-300 hover:text-aqua">
                     <User className="mr-2 h-4 w-4" />
                     <span>Profile</span>
                   </Link>
                 </DropdownMenuItem>
-                <DropdownMenuItem asChild>
-                  <Link href="/settings" className="flex items-center">
+                <DropdownMenuItem asChild className="hover:bg-gunmetal/50">
+                  <Link href="/settings" className="flex items-center text-gray-300 hover:text-aqua">
                     <Settings className="mr-2 h-4 w-4" />
                     <span>Settings</span>
                   </Link>
                 </DropdownMenuItem>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem>
+                <DropdownMenuSeparator className="bg-aqua/20" />
+                <DropdownMenuItem className="hover:bg-gunmetal/50 text-gray-300 hover:text-luxury-gold">
                   <LogOut className="mr-2 h-4 w-4" />
                   <span>Log out</span>
                 </DropdownMenuItem>
@@ -123,7 +130,7 @@ export function Navbar() {
             <Button
               variant="ghost"
               onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-              className="inline-flex items-center justify-center rounded-md p-2"
+              className="inline-flex items-center justify-center rounded-md p-2 text-aqua hover:bg-gunmetal/50"
             >
               <span className="sr-only">Open main menu</span>
               {mobileMenuOpen ? (
@@ -137,7 +144,7 @@ export function Navbar() {
       </div>
 
       {mobileMenuOpen && (
-        <div className="sm:hidden">
+        <div className="sm:hidden bg-dark-gunmetal border-t border-aqua/20">
           <div className="space-y-1 pb-3 pt-2">
             {navigation.map((item) => {
               const Icon = item.icon
@@ -145,10 +152,10 @@ export function Navbar() {
                 <Link
                   key={item.name}
                   href={item.href}
-                  className={`block py-2 pl-3 pr-4 text-base font-medium border-l-4 transition-colors ${
+                  className={`block py-2 pl-3 pr-4 text-base font-medium border-l-4 transition-all duration-300 ${
                     isActive(item.href)
-                      ? "border-primary bg-primary/10 text-primary"
-                      : "border-transparent text-muted-foreground hover:border-gray-300 hover:bg-gray-50 hover:text-foreground"
+                      ? "border-luxury-gold bg-gunmetal/30 text-aqua"
+                      : "border-transparent text-gray-300 hover:border-aqua/50 hover:bg-gunmetal/20 hover:text-aqua"
                   }`}
                   onClick={() => setMobileMenuOpen(false)}
                 >

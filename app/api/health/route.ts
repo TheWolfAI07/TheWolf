@@ -1,41 +1,38 @@
 import { NextResponse } from "next/server"
-import { createServerSupabaseClient, testEdgeFunctions } from "@/lib/supabase"
 import { config } from "@/lib/config"
-import { logger } from "@/lib/logger"
 
 export async function GET() {
   const startTime = Date.now()
 
   try {
-    logger.info("Starting comprehensive health check")
+    console.log("🔍 Starting health check...")
 
-    // Initialize health status
+    // Initialize health status with safe defaults
     const healthStatus = {
-      status: "unknown" as "healthy" | "degraded" | "unhealthy" | "unknown",
+      status: "healthy" as "healthy" | "degraded" | "unhealthy",
       timestamp: new Date().toISOString(),
       responseTime: 0,
       version: config.system.version,
       environment: config.system.environment,
       checks: {
-        database: { status: "unknown", error: null, details: {} },
-        auth: { status: "unknown", error: null, details: {} },
-        tables: { status: "unknown", error: null, details: {} },
-        edgeFunctions: { status: "unknown", error: null, details: {} },
-        environment: { status: "unknown", error: null, details: {} },
+        database: { status: "healthy", error: null, details: {} },
+        auth: { status: "healthy", error: null, details: {} },
+        environment: { status: "healthy", error: null, details: {} },
       },
-      environment: {
+      environment_vars: {
         nodeEnv: config.system.environment,
         hasSupabaseUrl: !!process.env.NEXT_PUBLIC_SUPABASE_URL,
         hasSupabaseKey: !!process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
         hasServiceKey: !!process.env.SUPABASE_SERVICE_ROLE_KEY,
-        appUrl: process.env.NEXT_PUBLIC_APP_URL || "not_set",
       },
       setupRequired: false,
-      message: "",
+      message: "✅ All systems operational",
     }
 
-    // Check environment variables
+    // Check environment variables first
     if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY) {
+      console.error("❌ Missing environment variables")
+
       healthStatus.checks.environment = {
         status: "unhealthy",
         error: "Missing required environment variables",
@@ -51,140 +48,56 @@ export async function GET() {
       healthStatus.message = "❌ Critical environment variables missing"
       healthStatus.responseTime = Date.now() - startTime
 
-      logger.critical("Health check failed - missing environment variables", {
-        missingVars: healthStatus.checks.environment.details.missingVars,
-      })
-
       return NextResponse.json(healthStatus, { status: 500 })
     }
 
-    healthStatus.checks.environment = { status: "healthy", error: null, details: {} }
+    console.log("✅ Environment variables OK")
 
-    // Test database connection
-    let supabase
+    // Test database connection using dynamic import to avoid server-side issues
     try {
-      supabase = createServerSupabaseClient()
+      const { createServerSupabaseClient } = await import("@/lib/supabase")
+      const supabase = createServerSupabaseClient()
+
+      console.log("✅ Supabase client created")
 
       // Test auth connection
       const { error: authError } = await supabase.auth.getSession()
-
       if (authError && !authError.message.includes("session")) {
         throw new Error(`Auth connection failed: ${authError.message}`)
       }
 
+      console.log("✅ Auth connection OK")
       healthStatus.checks.auth = { status: "healthy", error: null, details: {} }
 
-      // Test database connection with a simple query
+      // Test database with a simple query
       const { data: dbTest, error: dbError } = await supabase
         .from("wolf_settings")
         .select("count(*)", { count: "exact", head: true })
 
       if (dbError) {
+        console.warn("⚠️ Database query failed:", dbError.message)
         healthStatus.checks.database = {
           status: "degraded",
           error: dbError.message,
           details: { code: dbError.code, hint: dbError.hint },
         }
-
-        logger.warn("Database connection degraded", {
-          error: dbError.message,
-          code: dbError.code,
-        })
+        healthStatus.setupRequired = true
       } else {
+        console.log("✅ Database connection OK")
         healthStatus.checks.database = {
           status: "healthy",
           error: null,
           details: { connectionTest: "passed" },
         }
-
-        logger.info("Database connection healthy")
       }
     } catch (error: any) {
-      logger.error("Database connection failed", {
-        error: error.message,
-        stack: error.stack,
-      })
-
+      console.error("❌ Database connection failed:", error.message)
       healthStatus.checks.database = {
         status: "unhealthy",
         error: error.message,
         details: { type: "connection_error" },
       }
-    }
-
-    // Check required tables
-    const requiredTables = [
-      "wolf_settings",
-      "wolf_analytics",
-      "wolf_projects",
-      "wolf_activities",
-      "wolf_notifications",
-      "wolf_logs",
-    ]
-
-    const tableStatus: Record<string, boolean> = {}
-    let tablesHealthy = 0
-
-    if (supabase && healthStatus.checks.database.status !== "unhealthy") {
-      for (const table of requiredTables) {
-        try {
-          const { error } = await supabase.from(table).select("count(*)", { count: "exact", head: true })
-
-          tableStatus[table] = !error
-          if (!error) tablesHealthy++
-        } catch (error) {
-          tableStatus[table] = false
-        }
-      }
-    }
-
-    const allTablesExist = tablesHealthy === requiredTables.length
-    healthStatus.setupRequired = !allTablesExist
-
-    healthStatus.checks.tables = {
-      status: allTablesExist ? "healthy" : tablesHealthy > 0 ? "degraded" : "unhealthy",
-      error: allTablesExist ? null : `${tablesHealthy}/${requiredTables.length} tables available`,
-      details: {
-        tables: tableStatus,
-        healthy: tablesHealthy,
-        total: requiredTables.length,
-      },
-    }
-
-    logger.info("Tables check completed", {
-      tablesHealthy,
-      totalTables: requiredTables.length,
-      allTablesExist,
-    })
-
-    // Check Edge Functions
-    try {
-      const edgeFunctionsResult = await testEdgeFunctions()
-
-      healthStatus.checks.edgeFunctions = {
-        status: edgeFunctionsResult.success ? "healthy" : "degraded",
-        error: edgeFunctionsResult.error || null,
-        details: {
-          status: edgeFunctionsResult.status,
-          message: edgeFunctionsResult.message,
-        },
-      }
-
-      logger.info("Edge Functions check completed", {
-        status: edgeFunctionsResult.status,
-        success: edgeFunctionsResult.success,
-      })
-    } catch (error: any) {
-      logger.error("Edge Functions check failed", {
-        error: error.message,
-        stack: error.stack,
-      })
-
-      healthStatus.checks.edgeFunctions = {
-        status: "degraded",
-        error: error.message,
-        details: { type: "check_error" },
-      }
+      healthStatus.setupRequired = true
     }
 
     // Determine overall status
@@ -207,7 +120,7 @@ export async function GET() {
 
     healthStatus.responseTime = Date.now() - startTime
 
-    logger.info(`Health check completed in ${healthStatus.responseTime}ms - Status: ${healthStatus.status}`)
+    console.log(`🎯 Health check completed in ${healthStatus.responseTime}ms - Status: ${healthStatus.status}`)
 
     const statusCode = healthStatus.status === "healthy" ? 200 : healthStatus.status === "degraded" ? 200 : 503
 
@@ -215,11 +128,7 @@ export async function GET() {
   } catch (error: any) {
     const responseTime = Date.now() - startTime
 
-    logger.critical("Health check failed with exception", {
-      error: error.message,
-      stack: error.stack,
-      responseTime,
-    })
+    console.error("💥 Health check failed:", error.message)
 
     const errorResponse = {
       status: "unhealthy",
@@ -228,6 +137,11 @@ export async function GET() {
       error: error?.message || "Health check failed",
       message: "❌ System health check failed",
       setupRequired: true,
+      checks: {
+        database: { status: "error", error: error.message, details: {} },
+        auth: { status: "error", error: error.message, details: {} },
+        environment: { status: "error", error: error.message, details: {} },
+      },
     }
 
     return NextResponse.json(errorResponse, { status: 500 })

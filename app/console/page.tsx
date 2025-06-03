@@ -67,7 +67,7 @@ export default function ConsolePage() {
   const [logs, setLogs] = useState<LogEntry[]>([])
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>([])
   const [newMessage, setNewMessage] = useState("")
-  const [sqlQuery, setSqlQuery] = useState("SELECT * FROM users LIMIT 10;")
+  const [sqlQuery, setSqlQuery] = useState("SELECT * FROM wolf_settings LIMIT 5;")
   const [queryResult, setQueryResult] = useState<any>(null)
   const [isQueryExecuting, setIsQueryExecuting] = useState(false)
   const [loading, setLoading] = useState(true)
@@ -86,6 +86,7 @@ export default function ConsolePage() {
   const initializeConsole = async () => {
     try {
       setLoading(true)
+      addLog("info", "🚀 Initializing Wolf Console...", "console")
 
       // Initialize API endpoints
       const endpoints: APIEndpoint[] = [
@@ -102,10 +103,10 @@ export default function ConsolePage() {
         },
         {
           id: "2",
-          name: "Users API",
-          method: "GET",
-          path: "/api/users",
-          description: "Manage users",
+          name: "Setup Database",
+          method: "POST",
+          path: "/api/setup",
+          description: "Initialize database tables",
           enabled: true,
           lastUsed: "Unknown",
           responseTime: 0,
@@ -135,10 +136,10 @@ export default function ConsolePage() {
         },
         {
           id: "5",
-          name: "Test API",
+          name: "Users API",
           method: "GET",
-          path: "/api/test",
-          description: "Test connectivity",
+          path: "/api/users",
+          description: "User management",
           enabled: true,
           lastUsed: "Unknown",
           responseTime: 0,
@@ -162,7 +163,7 @@ export default function ConsolePage() {
         {
           id: "1",
           type: "system",
-          message: "Wolf Console initialized successfully. All systems online.",
+          message: "🐺 Wolf Console initialized successfully. All systems online.",
           timestamp: new Date().toISOString(),
         },
         {
@@ -175,10 +176,10 @@ export default function ConsolePage() {
       ]
       setChatMessages(initialChat)
 
-      addLog("info", "Console initialized successfully", "console")
+      addLog("info", "✅ Console initialized successfully", "console")
     } catch (error) {
       console.error("Error initializing console:", error)
-      addLog("error", "Failed to initialize console", "console")
+      addLog("error", "❌ Failed to initialize console", "console")
     } finally {
       setLoading(false)
     }
@@ -186,56 +187,69 @@ export default function ConsolePage() {
 
   const checkSystemHealth = async () => {
     try {
+      addLog("info", "🔍 Checking system health...", "system")
+
       const response = await fetch("/api/health")
       const healthData = await response.json()
 
       setSetupRequired(healthData.setupRequired === true)
 
       if (healthData.setupRequired) {
-        addLog("warn", "Database setup required. Click 'Initialize Database' to set up required tables.", "system")
+        addLog("warn", "⚠️ Database setup required. Click 'Initialize Database' to set up required tables.", "system")
       } else {
-        addLog("info", "System health check completed successfully", "system")
+        addLog("info", "✅ System health check completed successfully", "system")
       }
-    } catch (error) {
-      addLog("error", "Health check failed", "system")
+
+      return healthData
+    } catch (error: any) {
+      addLog("error", `❌ Health check failed: ${error.message}`, "system")
+      return null
     }
   }
 
   const setupDatabase = async () => {
     try {
       setIsSettingUp(true)
-      addLog("info", "Setting up database...", "system")
+      addLog("info", "🚀 Setting up database...", "system")
 
-      const response = await fetch("/api/setup")
+      const response = await fetch("/api/setup", { method: "POST" })
       const result = await response.json()
 
       if (result.success) {
-        addLog("info", "Database setup successful!", "system")
+        addLog("info", "🎉 Database setup successful!", "system")
         setSetupRequired(false)
 
         // Refresh data
         await testAllEndpoints(apiEndpoints)
         await loadSystemMetrics()
       } else {
-        addLog("error", `Database setup failed: ${result.error || "Unknown error"}`, "system")
+        addLog("error", `❌ Database setup failed: ${result.error || "Unknown error"}`, "system")
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error("Database setup error:", error)
-      addLog("error", `Database setup error: ${error}`, "system")
+      addLog("error", `💥 Database setup error: ${error.message}`, "system")
     } finally {
       setIsSettingUp(false)
     }
   }
 
   const testAllEndpoints = async (endpoints: APIEndpoint[]) => {
+    addLog("info", "🧪 Testing all API endpoints...", "api-test")
+
     const updatedEndpoints = await Promise.all(
       endpoints.map(async (endpoint) => {
         try {
           const startTime = Date.now()
           const controller = new AbortController()
-          const timeoutId = setTimeout(() => controller.abort(), 5000)
+          const timeoutId = setTimeout(() => controller.abort(), 10000)
 
-          const response = await fetch(endpoint.path, { signal: controller.signal })
+          const response = await fetch(endpoint.path, {
+            signal: controller.signal,
+            method: endpoint.method,
+            headers: {
+              "Content-Type": "application/json",
+            },
+          })
           clearTimeout(timeoutId)
 
           const endTime = Date.now()
@@ -245,7 +259,7 @@ export default function ConsolePage() {
           try {
             responseData = await response.json()
           } catch (jsonError) {
-            console.error(`Error parsing JSON from ${endpoint.path}:`, jsonError)
+            console.warn(`Non-JSON response from ${endpoint.path}`)
           }
 
           const updatedEndpoint = {
@@ -258,13 +272,13 @@ export default function ConsolePage() {
 
           addLog(
             response.ok ? "info" : "error",
-            `API ${endpoint.path} ${response.ok ? "responded successfully" : "failed"} (${responseTime}ms)`,
+            `${response.ok ? "✅" : "❌"} API ${endpoint.path} ${response.ok ? "responded successfully" : "failed"} (${responseTime}ms)`,
             "api-test",
           )
 
           return updatedEndpoint
-        } catch (error) {
-          addLog("error", `API ${endpoint.path} failed: ${error}`, "api-test")
+        } catch (error: any) {
+          addLog("error", `❌ API ${endpoint.path} failed: ${error.message}`, "api-test")
           return {
             ...endpoint,
             status: "error" as const,
@@ -276,21 +290,15 @@ export default function ConsolePage() {
     )
 
     setApiEndpoints(updatedEndpoints)
+    addLog("info", "🏁 API endpoint testing completed", "api-test")
   }
 
   const loadSystemMetrics = async () => {
     try {
+      addLog("info", "📊 Loading system metrics...", "metrics")
+
       const healthResponse = await fetch("/api/health")
       const healthData = await healthResponse.json()
-
-      let usersResponse, analyticsResponse
-
-      try {
-        usersResponse = await fetch("/api/users")
-        analyticsResponse = await fetch("/api/analytics?type=overview")
-      } catch (error) {
-        console.error("Error fetching API data:", error)
-      }
 
       const metrics: SystemMetric[] = [
         {
@@ -301,8 +309,8 @@ export default function ConsolePage() {
         },
         {
           name: "Database",
-          value: healthData.database?.connected ? "Connected" : "Disconnected",
-          status: healthData.database?.connected ? "good" : "critical",
+          value: healthData.checks?.database?.status === "healthy" ? "Connected" : "Disconnected",
+          status: healthData.checks?.database?.status === "healthy" ? "good" : "critical",
           trend: "stable",
         },
         {
@@ -311,21 +319,18 @@ export default function ConsolePage() {
           status: apiEndpoints.every((e) => e.status === "healthy") ? "good" : "warning",
           trend: "stable",
         },
+        {
+          name: "Response Time",
+          value: `${healthData.responseTime || 0}ms`,
+          status: (healthData.responseTime || 0) < 1000 ? "good" : "warning",
+          trend: "stable",
+        },
       ]
 
-      if (usersResponse && usersResponse.ok) {
-        const usersData = await usersResponse.json()
-        metrics.push({
-          name: "Total Users",
-          value: usersData.total?.toString() || "0",
-          status: "good",
-          trend: "up",
-        })
-      }
-
       setSystemMetrics(metrics)
-    } catch (error) {
-      addLog("error", `Failed to load system metrics: ${error}`, "metrics")
+      addLog("info", "✅ System metrics loaded successfully", "metrics")
+    } catch (error: any) {
+      addLog("error", `❌ Failed to load system metrics: ${error.message}`, "metrics")
     }
   }
 
@@ -351,38 +356,65 @@ export default function ConsolePage() {
     }
 
     setChatMessages((prev) => [...prev, userMessage])
+    const currentMessage = newMessage
     setNewMessage("")
 
-    try {
-      const response = await fetch("/api/chat", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ message: newMessage }),
-      })
-
-      const result = await response.json()
-
-      if (result.success) {
-        setChatMessages((prev) => [...prev, result.data])
-      } else {
-        const errorMessage: ChatMessage = {
-          id: (Date.now() + 1).toString(),
-          type: "ai",
-          message: "Sorry, I encountered an error processing your message.",
-          timestamp: new Date().toISOString(),
-        }
-        setChatMessages((prev) => [...prev, errorMessage])
-      }
-    } catch (error) {
-      console.error("Chat error:", error)
-      const errorMessage: ChatMessage = {
+    // Handle simple commands
+    if (currentMessage.toLowerCase() === "help") {
+      const helpMessage: ChatMessage = {
         id: (Date.now() + 1).toString(),
         type: "ai",
-        message: "I'm having trouble connecting right now. Please try again.",
+        message: `🤖 Available commands:
+- help: Show this help message
+- status: Check system status
+- test: Test all APIs
+- setup: Initialize database
+- clear: Clear chat history`,
         timestamp: new Date().toISOString(),
       }
-      setChatMessages((prev) => [...prev, errorMessage])
+      setChatMessages((prev) => [...prev, helpMessage])
+      return
     }
+
+    if (currentMessage.toLowerCase() === "status") {
+      const healthData = await checkSystemHealth()
+      const statusMessage: ChatMessage = {
+        id: (Date.now() + 1).toString(),
+        type: "ai",
+        message: `📊 System Status: ${healthData?.status || "Unknown"}
+Database: ${healthData?.checks?.database?.status || "Unknown"}
+Setup Required: ${healthData?.setupRequired ? "Yes" : "No"}`,
+        timestamp: new Date().toISOString(),
+      }
+      setChatMessages((prev) => [...prev, statusMessage])
+      return
+    }
+
+    if (currentMessage.toLowerCase() === "test") {
+      await testAllEndpoints(apiEndpoints)
+      const testMessage: ChatMessage = {
+        id: (Date.now() + 1).toString(),
+        type: "ai",
+        message: "🧪 API testing completed! Check the APIs tab for results.",
+        timestamp: new Date().toISOString(),
+      }
+      setChatMessages((prev) => [...prev, testMessage])
+      return
+    }
+
+    if (currentMessage.toLowerCase() === "clear") {
+      setChatMessages([])
+      return
+    }
+
+    // Default response
+    const aiMessage: ChatMessage = {
+      id: (Date.now() + 1).toString(),
+      type: "ai",
+      message: `I received your message: "${currentMessage}". Try typing 'help' for available commands!`,
+      timestamp: new Date().toISOString(),
+    }
+    setChatMessages((prev) => [...prev, aiMessage])
   }
 
   const executeQuery = async () => {
@@ -390,30 +422,31 @@ export default function ConsolePage() {
 
     setIsQueryExecuting(true)
     setQueryResult(null)
+    addLog("info", `🗃️ Executing SQL: ${sqlQuery}`, "database")
 
     try {
-      // For now, we'll simulate query execution
+      // Simulate query execution for now
       await new Promise((resolve) => setTimeout(resolve, 1000))
 
       setQueryResult({
         success: true,
         message: "Query executed successfully (simulated)",
         data: [
-          { id: 1, username: "demo_user", email: "demo@wolf.com", status: "active" },
-          { id: 2, username: "test_user", email: "test@wolf.com", status: "active" },
+          { id: 1, key: "platform_version", value: "1.0.0", category: "system" },
+          { id: 2, key: "setup_completed", value: true, category: "system" },
         ],
         rowCount: 2,
         executionTime: "1.2ms",
       })
 
-      addLog("info", `SQL query executed: ${sqlQuery}`, "database")
-    } catch (error) {
+      addLog("info", `✅ SQL query executed successfully`, "database")
+    } catch (error: any) {
       setQueryResult({
         success: false,
         error: "Query execution failed",
-        message: "Database query simulation failed",
+        message: error.message,
       })
-      addLog("error", `SQL query failed: ${error}`, "database")
+      addLog("error", `❌ SQL query failed: ${error.message}`, "database")
     } finally {
       setIsQueryExecuting(false)
     }
@@ -439,7 +472,7 @@ export default function ConsolePage() {
       <div className="flex items-center justify-center min-h-screen">
         <div className="text-center">
           <RefreshCw className="h-8 w-8 animate-spin mx-auto mb-4" />
-          <p>Initializing Wolf Console...</p>
+          <p>🐺 Initializing Wolf Console...</p>
         </div>
       </div>
     )
@@ -449,7 +482,7 @@ export default function ConsolePage() {
     <div className="container mx-auto p-6 space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold">Wolf Console</h1>
+          <h1 className="text-3xl font-bold">🐺 Wolf Console</h1>
           <p className="text-muted-foreground">Platform management and monitoring</p>
         </div>
         {setupRequired && (
@@ -672,7 +705,7 @@ export default function ConsolePage() {
                 <Input
                   value={newMessage}
                   onChange={(e) => setNewMessage(e.target.value)}
-                  placeholder="Type your message..."
+                  placeholder="Type your message... (try 'help')"
                   onKeyPress={(e) => e.key === "Enter" && sendChatMessage()}
                 />
                 <Button onClick={sendChatMessage}>Send</Button>
