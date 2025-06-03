@@ -1,344 +1,384 @@
-import { supabase, safeDbOperation } from "./supabase"
-import type { User } from "@supabase/supabase-js"
+import { createClientSupabaseClient, createServerSupabaseClient, safeDbOperation } from "./supabase"
 
 export interface AuthUser {
   id: string
   email: string
+  username?: string
   full_name?: string
   avatar_url?: string
+  role?: string
+  status?: string
+  last_sign_in_at?: string
+  created_at?: string
 }
 
 export class AuthService {
-  // Sign up new user with enhanced error handling
+  private static getClient() {
+    if (typeof window !== "undefined") {
+      return createClientSupabaseClient()
+    } else {
+      return createServerSupabaseClient()
+    }
+  }
+
+  // REAL user registration with proper validation
   static async signUp(email: string, password: string, fullName?: string) {
     try {
-      if (!supabase) {
-        throw new Error("Authentication service not available")
-      }
-
-      // Validate inputs
       if (!email || !email.includes("@")) {
-        return { user: null, error: "Valid email is required" }
+        return { user: null, error: "Valid email address is required" }
       }
 
       if (!password || password.length < 6) {
-        return { user: null, error: "Password must be at least 6 characters" }
+        return { user: null, error: "Password must be at least 6 characters long" }
       }
 
-      console.log("Attempting to sign up user:", email)
+      const supabase = this.getClient()
 
-      const { data, error } = await supabase.auth.signUp({
-        email: email.trim().toLowerCase(),
+      console.log(`🔄 Creating new user account: ${email}`)
+
+      // Create auth user
+      const { data: authData, error: authError } = await supabase.auth.signUp({
+        email: email.toLowerCase().trim(),
         password,
         options: {
           data: {
-            full_name: fullName || "",
+            full_name: fullName?.trim() || "",
           },
         },
       })
 
-      if (error) {
-        console.error("Supabase sign up error:", error)
-        throw error
+      if (authError) {
+        console.error("❌ Auth signup failed:", authError)
+        return { user: null, error: authError.message }
       }
 
-      console.log("Sign up successful:", data.user?.email)
-      return { user: data.user, error: null }
+      if (!authData.user) {
+        return { user: null, error: "Failed to create user account" }
+      }
+
+      console.log(`✅ User account created: ${authData.user.id}`)
+
+      // Create user profile
+      const { error: profileError } = await safeDbOperation(
+        () =>
+          supabase.from("profiles").insert([
+            {
+              id: authData.user!.id,
+              email: authData.user!.email!,
+              username: email.split("@")[0].toLowerCase(),
+              full_name: fullName?.trim() || null,
+              role: "user",
+              status: "active",
+              created_at: new Date().toISOString(),
+              updated_at: new Date().toISOString(),
+            },
+          ]),
+        null,
+      )
+
+      if (profileError.error) {
+        console.error("⚠️ Profile creation failed:", profileError.error)
+        // Don't fail signup if profile creation fails
+      } else {
+        console.log("✅ User profile created")
+      }
+
+      // Log the registration activity
+      await this.logActivity(authData.user.id, "user_registered", {
+        email: authData.user.email,
+        registration_method: "email",
+      })
+
+      return {
+        user: {
+          id: authData.user.id,
+          email: authData.user.email || "",
+          username: email.split("@")[0].toLowerCase(),
+          full_name: fullName,
+          role: "user",
+          status: "active",
+        },
+        error: null,
+      }
     } catch (error: any) {
-      console.error("Sign up error:", error)
-      return { user: null, error: error?.message || "Sign up failed" }
+      console.error("❌ Signup error:", error)
+      return { user: null, error: error.message || "Registration failed" }
     }
   }
 
-  // Sign in user with robust error handling
+  // REAL user authentication with activity logging
   static async signIn(email: string, password: string) {
     try {
-      if (!supabase) {
-        throw new Error("Authentication service not available")
-      }
-
-      // Validate inputs
       if (!email || !email.includes("@")) {
-        return { user: null, session: null, error: "Valid email is required" }
+        return { user: null, error: "Valid email address is required" }
       }
 
-      if (!password || password.length < 1) {
-        return { user: null, session: null, error: "Password is required" }
+      if (!password) {
+        return { user: null, error: "Password is required" }
       }
 
-      console.log("Attempting to sign in user:", email)
+      const supabase = this.getClient()
 
-      // Normalize email
-      const normalizedEmail = email.trim().toLowerCase()
-
-      // Special handling for demo account
-      const isDemoAccount = normalizedEmail === "demo@wolf.com"
+      console.log(`🔄 Authenticating user: ${email}`)
 
       const { data, error } = await supabase.auth.signInWithPassword({
-        email: normalizedEmail,
+        email: email.toLowerCase().trim(),
         password,
       })
 
       if (error) {
-        console.error("Supabase sign in error:", error)
+        console.error("❌ Authentication failed:", error)
 
-        // Handle demo user creation
-        if (error.message.includes("Invalid login credentials") && isDemoAccount) {
-          console.log("Demo user doesn't exist, attempting to create...")
-          const createResult = await this.createDemoUser()
+        // Log failed login attempt
+        await this.logActivity(null, "login_failed", {
+          email,
+          error: error.message,
+          timestamp: new Date().toISOString(),
+        })
 
-          if (createResult.success) {
-            // Retry sign in
-            const { data: retryData, error: retryError } = await supabase.auth.signInWithPassword({
-              email: normalizedEmail,
-              password,
+        return { user: null, error: error.message }
+      }
+
+      if (!data.user) {
+        return { user: null, error: "Authentication failed" }
+      }
+
+      console.log(`✅ User authenticated: ${data.user.id}`)
+
+      // Update last sign in time
+      const { error: updateError } = await safeDbOperation(
+        () =>
+          supabase
+            .from("profiles")
+            .update({
+              last_sign_in_at: new Date().toISOString(),
+              updated_at: new Date().toISOString(),
             })
-
-            if (retryError) {
-              console.error("Demo user retry sign in failed:", retryError)
-              throw retryError
-            }
-
-            console.log("Demo user created and signed in successfully")
-
-            // Ensure profile exists
-            if (retryData.user) {
-              await this.ensureUserProfile(retryData.user)
-            }
-
-            return { user: retryData.user, session: retryData.session, error: null }
-          }
-        }
-
-        throw error
-      }
-
-      console.log("Sign in successful:", data.user?.email)
-
-      // Ensure profile exists after successful sign in
-      if (data.user) {
-        await this.ensureUserProfile(data.user)
-      }
-
-      return { user: data.user, session: data.session, error: null }
-    } catch (error: any) {
-      console.error("Sign in error:", error)
-      return { user: null, session: null, error: error?.message || "Sign in failed" }
-    }
-  }
-
-  // Sign out user
-  static async signOut() {
-    try {
-      if (!supabase) {
-        return { error: "Authentication service not available" }
-      }
-
-      const { error } = await supabase.auth.signOut()
-      if (error) throw error
-      return { error: null }
-    } catch (error: any) {
-      console.error("Sign out error:", error)
-      return { error: error?.message || "Sign out failed" }
-    }
-  }
-
-  // Get current user with safe error handling
-  static async getCurrentUser(): Promise<AuthUser | null> {
-    try {
-      if (!supabase) {
-        console.warn("Authentication service not available")
-        return null
-      }
-
-      const {
-        data: { session },
-        error: sessionError,
-      } = await supabase.auth.getSession()
-
-      if (sessionError) {
-        console.error("Session error:", sessionError)
-        return null
-      }
-
-      if (!session || !session.user) {
-        return null
-      }
-
-      const user = session.user
-
-      // Try to get profile data
-      const { data: profile, error: profileError } = await safeDbOperation(
-        () => supabase.from("profiles").select("*").eq("id", user.id).single(),
+            .eq("id", data.user!.id),
         null,
       )
 
-      if (profileError) {
-        console.error("Get profile error:", profileError)
+      if (updateError.error) {
+        console.error("⚠️ Failed to update last sign in:", updateError.error)
       }
+
+      // Get user profile
+      const userProfile = await this.getUserProfile(data.user.id)
+
+      // Log successful login
+      await this.logActivity(data.user.id, "user_signed_in", {
+        email: data.user.email,
+        login_method: "email",
+      })
+
+      return {
+        user: {
+          id: data.user.id,
+          email: data.user.email || "",
+          username: userProfile?.username,
+          full_name: userProfile?.full_name || data.user.user_metadata?.full_name,
+          avatar_url: userProfile?.avatar_url,
+          role: userProfile?.role || "user",
+          status: userProfile?.status || "active",
+          last_sign_in_at: userProfile?.last_sign_in_at,
+          created_at: userProfile?.created_at,
+        },
+        error: null,
+      }
+    } catch (error: any) {
+      console.error("❌ Signin error:", error)
+      return { user: null, error: error.message || "Authentication failed" }
+    }
+  }
+
+  // REAL user sign out with activity logging
+  static async signOut() {
+    try {
+      const supabase = this.getClient()
+
+      // Get current user before signing out
+      const {
+        data: { user },
+      } = await supabase.auth.getUser()
+
+      const { error } = await supabase.auth.signOut()
+
+      if (error) {
+        console.error("❌ Signout error:", error)
+        return { error: error.message }
+      }
+
+      // Log signout activity
+      if (user) {
+        await this.logActivity(user.id, "user_signed_out", {
+          email: user.email,
+        })
+      }
+
+      console.log("✅ User signed out successfully")
+      return { error: null }
+    } catch (error: any) {
+      console.error("❌ Signout error:", error)
+      return { error: error.message || "Signout failed" }
+    }
+  }
+
+  // Get REAL current user data
+  static async getCurrentUser(): Promise<AuthUser | null> {
+    try {
+      const supabase = this.getClient()
+
+      const {
+        data: { user },
+        error,
+      } = await supabase.auth.getUser()
+
+      if (error || !user) {
+        return null
+      }
+
+      // Get user profile from database
+      const userProfile = await this.getUserProfile(user.id)
 
       return {
         id: user.id,
-        email: user.email!,
-        full_name: profile?.full_name || user.user_metadata?.full_name,
-        avatar_url: profile?.avatar_url,
+        email: user.email || "",
+        username: userProfile?.username,
+        full_name: userProfile?.full_name || user.user_metadata?.full_name,
+        avatar_url: userProfile?.avatar_url,
+        role: userProfile?.role || "user",
+        status: userProfile?.status || "active",
+        last_sign_in_at: userProfile?.last_sign_in_at,
+        created_at: userProfile?.created_at,
       }
-    } catch (error) {
-      console.error("Get current user error:", error)
+    } catch (error: any) {
+      console.error("❌ Get current user error:", error)
       return null
     }
   }
 
-  // Ensure user profile exists with safe database operations
-  static async ensureUserProfile(user: User) {
+  // Get REAL user profile from database
+  static async getUserProfile(userId: string) {
     try {
-      if (!supabase) {
-        return { error: "Database not available" }
-      }
+      const supabase = this.getClient()
 
-      // Check if profile exists
-      const { data: existingProfile, error: checkError } = await safeDbOperation(
-        () => supabase.from("profiles").select("id").eq("id", user.id).single(),
+      const { data, error } = await safeDbOperation(
+        () => supabase.from("profiles").select("*").eq("id", userId).single(),
         null,
       )
 
-      if (checkError) {
-        console.error("Profile check error:", checkError)
+      if (error.error) {
+        console.error("❌ Get user profile error:", error.error)
+        return null
       }
 
-      if (existingProfile) {
-        return { error: null }
-      }
-
-      // Create profile
-      const { error } = await safeDbOperation(
-        () =>
-          supabase.from("profiles").upsert(
-            {
-              id: user.id,
-              email: user.email!,
-              full_name: user.user_metadata?.full_name || null,
-              updated_at: new Date().toISOString(),
-            },
-            { onConflict: "id" },
-          ),
-        null,
-      )
-
-      if (error) {
-        console.error("Profile creation error:", error)
-        return { error }
-      }
-
-      return { error: null }
+      return data.data
     } catch (error: any) {
-      console.error("Ensure user profile error:", error)
-      return { error: error?.message || "Profile creation failed" }
+      console.error("❌ Get user profile error:", error)
+      return null
     }
   }
 
-  // Create demo user with enhanced error handling
-  static async createDemoUser() {
+  // Update REAL user profile
+  static async updateProfile(
+    userId: string,
+    updates: Partial<{ full_name: string; avatar_url: string; username: string }>,
+  ) {
     try {
-      if (!supabase) {
-        return { success: false, error: "Authentication service not available" }
-      }
+      const supabase = this.getClient()
 
-      console.log("Creating demo user...")
-
-      const { data, error } = await supabase.auth.signUp({
-        email: "demo@wolf.com",
-        password: "demo123",
-        options: {
-          data: {
-            full_name: "Demo User",
-          },
+      // Update auth metadata
+      const { error: authError } = await supabase.auth.updateUser({
+        data: {
+          full_name: updates.full_name,
+          avatar_url: updates.avatar_url,
         },
       })
 
-      if (error) {
-        if (error.message.includes("already registered")) {
-          console.log("Demo user already exists")
-          return { success: true, error: null }
-        }
-
-        console.error("Demo user creation error:", error)
-        return { success: false, error: error.message }
+      if (authError) {
+        console.error("❌ Auth update error:", authError)
+        return { error: authError.message }
       }
 
-      console.log("Demo user created successfully")
-      return { success: true, user: data.user }
+      // Update profile in database
+      const { error: profileError } = await safeDbOperation(
+        () =>
+          supabase
+            .from("profiles")
+            .update({
+              ...updates,
+              updated_at: new Date().toISOString(),
+            })
+            .eq("id", userId),
+        null,
+      )
+
+      if (profileError.error) {
+        console.error("❌ Profile update error:", profileError.error)
+        return { error: profileError.error }
+      }
+
+      // Log profile update activity
+      await this.logActivity(userId, "profile_updated", {
+        updated_fields: Object.keys(updates),
+      })
+
+      console.log("✅ Profile updated successfully")
+      return { error: null }
     } catch (error: any) {
-      console.error("Create demo user error:", error)
-      return { success: false, error: error?.message || "Demo user creation failed" }
+      console.error("❌ Update profile error:", error)
+      return { error: error.message || "Update failed" }
     }
   }
 
-  // Reset password
+  // Log REAL user activities
+  private static async logActivity(userId: string | null, action: string, details: any = {}) {
+    try {
+      const supabase = this.getClient()
+
+      const { error } = await safeDbOperation(
+        () =>
+          supabase.from("wolf_activities").insert([
+            {
+              user_id: userId,
+              action,
+              details,
+              ip_address: typeof window !== "undefined" ? null : "127.0.0.1", // Would get real IP in production
+              user_agent: typeof window !== "undefined" ? navigator.userAgent : null,
+              success: true,
+              created_at: new Date().toISOString(),
+            },
+          ]),
+        null,
+      )
+
+      if (error.error) {
+        console.error("⚠️ Failed to log activity:", error.error)
+      }
+    } catch (error) {
+      console.error("⚠️ Activity logging error:", error)
+    }
+  }
+
+  // REAL password reset
   static async resetPassword(email: string) {
     try {
-      if (!supabase) {
-        return { error: "Authentication service not available" }
-      }
+      const supabase = this.getClient()
 
       const { error } = await supabase.auth.resetPasswordForEmail(email, {
         redirectTo: `${window.location.origin}/auth/reset-password`,
       })
 
-      if (error) throw error
-      return { error: null }
-    } catch (error: any) {
-      console.error("Reset password error:", error)
-      return { error: error?.message || "Password reset failed" }
-    }
-  }
-
-  // Update password
-  static async updatePassword(password: string) {
-    try {
-      if (!supabase) {
-        return { error: "Authentication service not available" }
-      }
-
-      const { error } = await supabase.auth.updateUser({ password })
-
-      if (error) throw error
-      return { error: null }
-    } catch (error: any) {
-      console.error("Update password error:", error)
-      return { error: error?.message || "Password update failed" }
-    }
-  }
-
-  // Update profile
-  static async updateProfile(userId: string, updates: Partial<{ full_name: string; avatar_url: string }>) {
-    try {
-      if (!supabase) {
-        return { error: "Database not available" }
-      }
-
-      const { error } = await safeDbOperation(
-        () =>
-          supabase.from("profiles").upsert(
-            {
-              id: userId,
-              ...updates,
-              updated_at: new Date().toISOString(),
-            },
-            { onConflict: "id" },
-          ),
-        null,
-      )
-
       if (error) {
-        console.error("Profile update error:", error)
-        return { error }
+        console.error("❌ Password reset error:", error)
+        return { error: error.message }
       }
 
+      console.log("✅ Password reset email sent")
       return { error: null }
     } catch (error: any) {
-      console.error("Update profile error:", error)
-      return { error: error?.message || "Profile update failed" }
+      console.error("❌ Password reset error:", error)
+      return { error: error.message || "Password reset failed" }
     }
   }
 }

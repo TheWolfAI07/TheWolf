@@ -38,24 +38,23 @@ export function useErrorHandler() {
     setError(null)
   }, [])
 
-  const withErrorHandling = useCallback(\
-    async <T>(fn: () => Promise<T>, context?: Record<string, any>): Promise<T | null> => {
-  try {
-    setLoading(true)
-    clearError()
-    const result = await fn()
-    setLoading(false)
-    return result
-  } catch (err: any) {
-    handleError(err, context)
-    return null
-  }
-}
-,
-    [handleError, clearError]
+  const withErrorHandling = useCallback(
+    async <T,>(fn: () => Promise<T>, context?: Record<string, any>): Promise<T | null> => {
+      try {
+        setLoading(true)
+        clearError()
+        const result = await fn()
+        setLoading(false)
+        return result
+      } catch (err: any) {
+        handleError(err, context)
+        return null
+      }
+    },
+    [handleError, clearError],
   )
 
-return {
+  return {
     error,
     loading,
     handleError,

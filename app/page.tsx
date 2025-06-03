@@ -1,304 +1,337 @@
 "use client"
 
-import { useEffect } from "react"
-import { useRouter } from "next/navigation"
-import Link from "next/link"
-import { Button } from "@/components/ui/button"
+import { useState, useEffect } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
-import { useAuthContext } from "@/components/auth/auth-provider"
-import { ArrowRight, BarChart3, Wallet, Terminal, Shield, Zap, Globe, Sparkles } from "lucide-react"
+import { Button } from "@/components/ui/button"
+import { Progress } from "@/components/ui/progress"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import {
+  Activity,
+  BarChart3,
+  Brain,
+  CheckCircle,
+  Clock,
+  Database,
+  Globe,
+  Loader2,
+  Server,
+  Shield,
+  TrendingUp,
+  Users,
+  Zap,
+} from "lucide-react"
+
+interface SystemStatus {
+  database: "healthy" | "warning" | "error"
+  api: "healthy" | "warning" | "error"
+  realtime: "healthy" | "warning" | "error"
+  ai: "healthy" | "warning" | "error"
+}
+
+interface PlatformStats {
+  totalProjects: number
+  activeProjects: number
+  completedProjects: number
+  avgProgress: number
+  recentActivities: number
+  systemUptime: string
+}
 
 export default function HomePage() {
-  const { user, loading } = useAuthContext()
-  const router = useRouter()
+  const [systemStatus, setSystemStatus] = useState<SystemStatus>({
+    database: "healthy",
+    api: "healthy",
+    realtime: "healthy",
+    ai: "healthy",
+  })
+
+  const [platformStats, setPlatformStats] = useState<PlatformStats>({
+    totalProjects: 12,
+    activeProjects: 8,
+    completedProjects: 4,
+    avgProgress: 67,
+    recentActivities: 24,
+    systemUptime: "15d 8h",
+  })
+
+  const [isLoading, setIsLoading] = useState(true)
 
   useEffect(() => {
-    if (!loading && user) {
-      router.push("/dashboard/wolf-grid")
-    }
-  }, [user, loading, router])
+    const timer = setTimeout(() => {
+      setIsLoading(false)
+    }, 1000)
 
-  if (loading) {
+    return () => clearTimeout(timer)
+  }, [])
+
+  const getStatusColor = (status: string) => {
+    switch (status) {
+      case "healthy":
+        return "text-green-600 bg-green-100"
+      case "warning":
+        return "text-yellow-600 bg-yellow-100"
+      case "error":
+        return "text-red-600 bg-red-100"
+      default:
+        return "text-gray-600 bg-gray-100"
+    }
+  }
+
+  const getStatusIcon = (status: string) => {
+    switch (status) {
+      case "healthy":
+        return <CheckCircle className="h-4 w-4" />
+      case "warning":
+        return <Clock className="h-4 w-4" />
+      case "error":
+        return <Activity className="h-4 w-4" />
+      default:
+        return <Activity className="h-4 w-4" />
+    }
+  }
+
+  if (isLoading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-black via-slate-900 to-slate-800 flex items-center justify-center">
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 flex items-center justify-center">
         <div className="text-center">
-          <div className="w-12 h-12 bg-gradient-to-r from-cyan-400 to-cyan-600 rounded-xl flex items-center justify-center mx-auto mb-4 animate-pulse">
-            <span className="text-black font-bold text-xl">W</span>
-          </div>
-          <p className="text-cyan-400">Loading...</p>
+          <Loader2 className="h-8 w-8 animate-spin mx-auto mb-4 text-blue-600" />
+          <h2 className="text-xl font-semibold text-gray-900 mb-2">Loading Wolf Platform</h2>
+          <p className="text-gray-600">Initializing AI-powered dashboard...</p>
         </div>
       </div>
     )
   }
 
-  if (user) {
-    return null // Will redirect to dashboard
-  }
-
   return (
-    <div className="min-h-screen bg-gradient-to-br from-black via-slate-900 to-slate-800">
-      {/* Header */}
-      <header className="border-b border-slate-700 bg-black/40 backdrop-blur-sm">
-        <div className="container mx-auto px-4 py-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-2">
-              <div className="w-10 h-10 bg-gradient-to-r from-cyan-400 to-cyan-600 rounded-xl flex items-center justify-center">
-                <span className="text-black font-bold text-xl">W</span>
-              </div>
-              <span className="text-white font-bold text-2xl">Wolf</span>
-            </div>
-            <div className="flex items-center space-x-4">
-              <Link href="/auth/signin">
-                <Button variant="ghost" className="text-slate-300 hover:text-white">
-                  Sign In
-                </Button>
-              </Link>
-              <Link href="/auth/signup">
-                <Button className="bg-gradient-to-r from-cyan-500 to-cyan-600 hover:from-cyan-600 hover:to-cyan-700 text-black">
-                  Get Started
-                </Button>
-              </Link>
-            </div>
-          </div>
-        </div>
-      </header>
-
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100">
       {/* Hero Section */}
-      <section className="container mx-auto px-4 py-20">
-        <div className="text-center max-w-4xl mx-auto">
-          <Badge className="mb-6 bg-cyan-500/20 text-cyan-400 border-cyan-500/30">
-            <Sparkles className="w-4 h-4 mr-2" />
-            Next-Generation Platform
-          </Badge>
-          <h1 className="text-5xl md:text-7xl font-bold text-white mb-6">
-            The Ultimate
-            <span className="bg-gradient-to-r from-cyan-400 to-pink-500 bg-clip-text text-transparent"> Wolf </span>
-            Platform
-          </h1>
-          <p className="text-xl text-slate-400 mb-8 max-w-2xl mx-auto">
-            Advanced crypto tracking, real-time analytics, powerful console tools, and intelligent project management -
-            all in one unified platform.
-          </p>
-          <div className="flex flex-col sm:flex-row gap-4 justify-center">
-            <Link href="/auth/signup">
-              <Button
-                size="lg"
-                className="bg-gradient-to-r from-cyan-500 to-cyan-600 hover:from-cyan-600 hover:to-cyan-700 text-black"
-              >
-                Start Building
-                <ArrowRight className="ml-2 w-5 h-5" />
-              </Button>
-            </Link>
-            <Link href="/docs">
-              <Button size="lg" variant="outline" className="border-slate-600 text-slate-300 hover:bg-slate-800">
-                View Documentation
-              </Button>
-            </Link>
-          </div>
-        </div>
-      </section>
-
-      {/* Features Grid */}
-      <section className="container mx-auto px-4 py-20">
-        <div className="text-center mb-16">
-          <h2 className="text-3xl md:text-4xl font-bold text-white mb-4">Everything You Need to Succeed</h2>
-          <p className="text-xl text-slate-400 max-w-2xl mx-auto">
-            Powerful tools and features designed for modern developers and crypto enthusiasts.
-          </p>
-        </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-          {/* Crypto Dashboard */}
-          <Card className="bg-black/40 border-slate-700 backdrop-blur-sm hover:border-cyan-500/50 transition-all duration-300">
-            <CardHeader>
-              <div className="w-12 h-12 bg-gradient-to-r from-cyan-500 to-cyan-600 rounded-lg flex items-center justify-center mb-4">
-                <Wallet className="w-6 h-6 text-black" />
+      <div className="bg-gradient-to-r from-blue-600 to-purple-700 text-white">
+        <div className="container mx-auto px-4 py-16">
+          <div className="text-center">
+            <div className="flex items-center justify-center mb-6">
+              <div className="bg-white/20 p-3 rounded-full mr-4">
+                <Brain className="h-8 w-8" />
               </div>
-              <CardTitle className="text-white">Crypto Dashboard</CardTitle>
-              <CardDescription className="text-slate-400">
-                Real-time crypto tracking with portfolio management and price alerts.
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <ul className="space-y-2 text-sm text-slate-300">
-                <li>• Live price tracking</li>
-                <li>• Portfolio analytics</li>
-                <li>• Price alerts</li>
-                <li>• Market insights</li>
-              </ul>
-            </CardContent>
-          </Card>
-
-          {/* Analytics */}
-          <Card className="bg-black/40 border-slate-700 backdrop-blur-sm hover:border-cyan-500/50 transition-all duration-300">
-            <CardHeader>
-              <div className="w-12 h-12 bg-gradient-to-r from-pink-500 to-pink-600 rounded-lg flex items-center justify-center mb-4">
-                <BarChart3 className="w-6 h-6 text-white" />
-              </div>
-              <CardTitle className="text-white">Advanced Analytics</CardTitle>
-              <CardDescription className="text-slate-400">
-                Comprehensive analytics and reporting for data-driven decisions.
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <ul className="space-y-2 text-sm text-slate-300">
-                <li>• Real-time metrics</li>
-                <li>• Custom dashboards</li>
-                <li>• Data visualization</li>
-                <li>• Export capabilities</li>
-              </ul>
-            </CardContent>
-          </Card>
-
-          {/* Console */}
-          <Card className="bg-black/40 border-slate-700 backdrop-blur-sm hover:border-cyan-500/50 transition-all duration-300">
-            <CardHeader>
-              <div className="w-12 h-12 bg-gradient-to-r from-green-500 to-green-600 rounded-lg flex items-center justify-center mb-4">
-                <Terminal className="w-6 h-6 text-white" />
-              </div>
-              <CardTitle className="text-white">Developer Console</CardTitle>
-              <CardDescription className="text-slate-400">
-                Powerful console with API testing, database queries, and custom functions.
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <ul className="space-y-2 text-sm text-slate-300">
-                <li>• API management</li>
-                <li>• Database queries</li>
-                <li>• Custom functions</li>
-                <li>• AI assistant</li>
-              </ul>
-            </CardContent>
-          </Card>
-
-          {/* Security */}
-          <Card className="bg-black/40 border-slate-700 backdrop-blur-sm hover:border-cyan-500/50 transition-all duration-300">
-            <CardHeader>
-              <div className="w-12 h-12 bg-gradient-to-r from-red-500 to-red-600 rounded-lg flex items-center justify-center mb-4">
-                <Shield className="w-6 h-6 text-white" />
-              </div>
-              <CardTitle className="text-white">Enterprise Security</CardTitle>
-              <CardDescription className="text-slate-400">
-                Bank-grade security with admin controls and user management.
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <ul className="space-y-2 text-sm text-slate-300">
-                <li>• Role-based access</li>
-                <li>• Activity logging</li>
-                <li>• Secure authentication</li>
-                <li>• Admin panel</li>
-              </ul>
-            </CardContent>
-          </Card>
-
-          {/* Performance */}
-          <Card className="bg-black/40 border-slate-700 backdrop-blur-sm hover:border-cyan-500/50 transition-all duration-300">
-            <CardHeader>
-              <div className="w-12 h-12 bg-gradient-to-r from-yellow-500 to-yellow-600 rounded-lg flex items-center justify-center mb-4">
-                <Zap className="w-6 h-6 text-black" />
-              </div>
-              <CardTitle className="text-white">Lightning Fast</CardTitle>
-              <CardDescription className="text-slate-400">
-                Optimized for speed with real-time updates and instant responses.
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <ul className="space-y-2 text-sm text-slate-300">
-                <li>• Real-time updates</li>
-                <li>• Optimized queries</li>
-                <li>• Fast loading</li>
-                <li>• Responsive design</li>
-              </ul>
-            </CardContent>
-          </Card>
-
-          {/* Scalability */}
-          <Card className="bg-black/40 border-slate-700 backdrop-blur-sm hover:border-cyan-500/50 transition-all duration-300">
-            <CardHeader>
-              <div className="w-12 h-12 bg-gradient-to-r from-purple-500 to-purple-600 rounded-lg flex items-center justify-center mb-4">
-                <Globe className="w-6 h-6 text-white" />
-              </div>
-              <CardTitle className="text-white">Global Scale</CardTitle>
-              <CardDescription className="text-slate-400">
-                Built to scale globally with enterprise-grade infrastructure.
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <ul className="space-y-2 text-sm text-slate-300">
-                <li>• Global CDN</li>
-                <li>• Auto-scaling</li>
-                <li>• 99.9% uptime</li>
-                <li>• Multi-region</li>
-              </ul>
-            </CardContent>
-          </Card>
-        </div>
-      </section>
-
-      {/* Stats Section */}
-      <section className="container mx-auto px-4 py-20">
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-8 text-center">
-          <div>
-            <div className="text-4xl font-bold text-cyan-400 mb-2">99.9%</div>
-            <div className="text-slate-400">Uptime</div>
-          </div>
-          <div>
-            <div className="text-4xl font-bold text-pink-400 mb-2">1M+</div>
-            <div className="text-slate-400">API Calls</div>
-          </div>
-          <div>
-            <div className="text-4xl font-bold text-green-400 mb-2">50ms</div>
-            <div className="text-slate-400">Response Time</div>
-          </div>
-          <div>
-            <div className="text-4xl font-bold text-yellow-400 mb-2">24/7</div>
-            <div className="text-slate-400">Support</div>
-          </div>
-        </div>
-      </section>
-
-      {/* CTA Section */}
-      <section className="container mx-auto px-4 py-20">
-        <div className="text-center max-w-3xl mx-auto">
-          <h2 className="text-3xl md:text-4xl font-bold text-white mb-6">Ready to Transform Your Workflow?</h2>
-          <p className="text-xl text-slate-400 mb-8">
-            Join thousands of developers and crypto enthusiasts who trust Wolf Platform for their projects.
-          </p>
-          <div className="flex flex-col sm:flex-row gap-4 justify-center">
-            <Link href="/auth/signup">
-              <Button
-                size="lg"
-                className="bg-gradient-to-r from-cyan-500 to-cyan-600 hover:from-cyan-600 hover:to-cyan-700 text-black"
-              >
-                Start Free Trial
-                <ArrowRight className="ml-2 w-5 h-5" />
-              </Button>
-            </Link>
-            <Link href="/auth/signin">
-              <Button size="lg" variant="outline" className="border-slate-600 text-slate-300 hover:bg-slate-800">
-                Sign In
-              </Button>
-            </Link>
-          </div>
-        </div>
-      </section>
-
-      {/* Footer */}
-      <footer className="border-t border-slate-700 bg-black/40 backdrop-blur-sm">
-        <div className="container mx-auto px-4 py-8">
-          <div className="flex flex-col md:flex-row justify-between items-center">
-            <div className="flex items-center space-x-2 mb-4 md:mb-0">
-              <div className="w-8 h-8 bg-gradient-to-r from-cyan-400 to-cyan-600 rounded-lg flex items-center justify-center">
-                <span className="text-black font-bold">W</span>
-              </div>
-              <span className="text-white font-bold text-xl">Wolf Platform</span>
+              <h1 className="text-4xl md:text-6xl font-bold">Wolf Platform</h1>
             </div>
-            <div className="text-slate-400 text-sm">© 2024 Wolf Platform. All rights reserved.</div>
+            <p className="text-xl md:text-2xl mb-8 text-blue-100">AI-Powered Project Management & Analytics Platform</p>
+            <div className="flex flex-wrap justify-center gap-4 mb-8">
+              <Badge variant="secondary" className="bg-white/20 text-white border-white/30">
+                <Zap className="h-4 w-4 mr-2" />
+                Real-time Collaboration
+              </Badge>
+              <Badge variant="secondary" className="bg-white/20 text-white border-white/30">
+                <Brain className="h-4 w-4 mr-2" />
+                AI Insights
+              </Badge>
+              <Badge variant="secondary" className="bg-white/20 text-white border-white/30">
+                <Shield className="h-4 w-4 mr-2" />
+                Enterprise Security
+              </Badge>
+            </div>
+            <div className="flex flex-wrap justify-center gap-4">
+              <Button size="lg" className="bg-white text-blue-600 hover:bg-blue-50">
+                <TrendingUp className="h-5 w-5 mr-2" />
+                View Dashboard
+              </Button>
+              <Button size="lg" variant="outline" className="border-white text-white hover:bg-white/10">
+                <Globe className="h-5 w-5 mr-2" />
+                Explore Features
+              </Button>
+            </div>
           </div>
         </div>
-      </footer>
+      </div>
+
+      {/* Main Dashboard */}
+      <div className="container mx-auto px-4 py-8">
+        <Tabs defaultValue="overview" className="space-y-6">
+          <TabsList className="grid w-full grid-cols-4">
+            <TabsTrigger value="overview">Overview</TabsTrigger>
+            <TabsTrigger value="projects">Projects</TabsTrigger>
+            <TabsTrigger value="analytics">Analytics</TabsTrigger>
+            <TabsTrigger value="system">System</TabsTrigger>
+          </TabsList>
+
+          <TabsContent value="overview" className="space-y-6">
+            {/* System Status Cards */}
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+              <Card>
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                  <CardTitle className="text-sm font-medium">Database</CardTitle>
+                  <Database className="h-4 w-4 text-muted-foreground" />
+                </CardHeader>
+                <CardContent>
+                  <div className="flex items-center space-x-2">
+                    <Badge className={getStatusColor(systemStatus.database)}>
+                      {getStatusIcon(systemStatus.database)}
+                      <span className="ml-1 capitalize">{systemStatus.database}</span>
+                    </Badge>
+                  </div>
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                  <CardTitle className="text-sm font-medium">API Services</CardTitle>
+                  <Server className="h-4 w-4 text-muted-foreground" />
+                </CardHeader>
+                <CardContent>
+                  <div className="flex items-center space-x-2">
+                    <Badge className={getStatusColor(systemStatus.api)}>
+                      {getStatusIcon(systemStatus.api)}
+                      <span className="ml-1 capitalize">{systemStatus.api}</span>
+                    </Badge>
+                  </div>
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                  <CardTitle className="text-sm font-medium">Real-time</CardTitle>
+                  <Activity className="h-4 w-4 text-muted-foreground" />
+                </CardHeader>
+                <CardContent>
+                  <div className="flex items-center space-x-2">
+                    <Badge className={getStatusColor(systemStatus.realtime)}>
+                      {getStatusIcon(systemStatus.realtime)}
+                      <span className="ml-1 capitalize">{systemStatus.realtime}</span>
+                    </Badge>
+                  </div>
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                  <CardTitle className="text-sm font-medium">AI Engine</CardTitle>
+                  <Brain className="h-4 w-4 text-muted-foreground" />
+                </CardHeader>
+                <CardContent>
+                  <div className="flex items-center space-x-2">
+                    <Badge className={getStatusColor(systemStatus.ai)}>
+                      {getStatusIcon(systemStatus.ai)}
+                      <span className="ml-1 capitalize">{systemStatus.ai}</span>
+                    </Badge>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+
+            {/* Platform Statistics */}
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-lg">Project Overview</CardTitle>
+                  <CardDescription>Current project statistics</CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="flex justify-between items-center">
+                    <span className="text-sm text-muted-foreground">Total Projects</span>
+                    <span className="font-semibold">{platformStats.totalProjects}</span>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span className="text-sm text-muted-foreground">Active</span>
+                    <span className="font-semibold text-green-600">{platformStats.activeProjects}</span>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span className="text-sm text-muted-foreground">Completed</span>
+                    <span className="font-semibold text-blue-600">{platformStats.completedProjects}</span>
+                  </div>
+                  <div className="space-y-2">
+                    <div className="flex justify-between items-center">
+                      <span className="text-sm text-muted-foreground">Average Progress</span>
+                      <span className="font-semibold">{platformStats.avgProgress}%</span>
+                    </div>
+                    <Progress value={platformStats.avgProgress} className="h-2" />
+                  </div>
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-lg">Activity Feed</CardTitle>
+                  <CardDescription>Recent platform activity</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="flex items-center space-x-4">
+                    <div className="bg-blue-100 p-3 rounded-full">
+                      <Users className="h-6 w-6 text-blue-600" />
+                    </div>
+                    <div>
+                      <p className="font-semibold">{platformStats.recentActivities}</p>
+                      <p className="text-sm text-muted-foreground">Recent activities (24h)</p>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-lg">System Uptime</CardTitle>
+                  <CardDescription>Platform availability</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="flex items-center space-x-4">
+                    <div className="bg-green-100 p-3 rounded-full">
+                      <CheckCircle className="h-6 w-6 text-green-600" />
+                    </div>
+                    <div>
+                      <p className="font-semibold">{platformStats.systemUptime}</p>
+                      <p className="text-sm text-muted-foreground">Continuous operation</p>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+          </TabsContent>
+
+          <TabsContent value="projects">
+            <Card>
+              <CardHeader>
+                <CardTitle>Project Management</CardTitle>
+                <CardDescription>Manage and monitor your projects</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="text-center py-8">
+                  <BarChart3 className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
+                  <p className="text-muted-foreground">Project management interface coming soon...</p>
+                </div>
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="analytics">
+            <Card>
+              <CardHeader>
+                <CardTitle>Analytics Dashboard</CardTitle>
+                <CardDescription>AI-powered insights and analytics</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="text-center py-8">
+                  <TrendingUp className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
+                  <p className="text-muted-foreground">Advanced analytics coming soon...</p>
+                </div>
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="system">
+            <Card>
+              <CardHeader>
+                <CardTitle>System Administration</CardTitle>
+                <CardDescription>Platform configuration and monitoring</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="text-center py-8">
+                  <Shield className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
+                  <p className="text-muted-foreground">System administration panel coming soon...</p>
+                </div>
+              </CardContent>
+            </Card>
+          </TabsContent>
+        </Tabs>
+      </div>
     </div>
   )
 }

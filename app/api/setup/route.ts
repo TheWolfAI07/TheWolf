@@ -1,151 +1,136 @@
 import { NextResponse } from "next/server"
+import { createServerSupabaseClient, initializeDatabase } from "@/lib/supabase"
+import { logger } from "@/lib/logger"
+import { config } from "@/lib/config"
 
 export async function GET() {
+  return await setupDatabase()
+}
+
+export async function POST() {
+  return await setupDatabase()
+}
+
+async function setupDatabase() {
+  const startTime = Date.now()
+
   try {
-    // Check if environment variables are configured
+    logger.info("Starting Wolf Platform database setup")
+
+    // Validate environment
     if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY) {
-      return NextResponse.json({
-        success: false,
-        error: "Supabase environment variables not configured",
-        message: "Please configure NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY",
+      const error = "Missing required Supabase environment variables"
+      logger.critical(error, {
+        hasUrl: !!process.env.NEXT_PUBLIC_SUPABASE_URL,
+        hasKey: !!process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
       })
+
+      throw new Error(error)
     }
 
-    const { createClient } = await import("@supabase/supabase-js")
-    const supabase = createClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL,
-      process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
-    )
+    const supabase = createServerSupabaseClient()
 
-    // Test connection first
+    // Test connection
+    logger.info("Testing database connection")
     const { error: connectionError } = await supabase.auth.getSession()
     if (connectionError && !connectionError.message.includes("session")) {
-      return NextResponse.json({
-        success: false,
-        error: "Database connection failed",
-        details: connectionError.message,
-      })
+      throw new Error(`Database connection failed: ${connectionError.message}`)
+    }
+    logger.info("Database connection successful")
+
+    // Initialize database
+    const result = await initializeDatabase()
+
+    if (!result.success) {
+      throw new Error(result.error || "Database initialization failed")
     }
 
-    // Check if tables already exist
-    const tables = [
-      "users",
-      "wolf_projects",
-      "wolf_analytics",
-      "wolf_activities",
-      "wolf_settings",
-      "wolf_chat_messages",
-      "wolf_function_logs",
-    ]
-    const existingTables = []
+    // Verify setup
+    logger.info("Verifying setup")
+    const verification = await verifySetup(supabase)
 
-    for (const table of tables) {
-      try {
-        const { error } = await supabase.from(table).select("count(*)", { count: "exact", head: true })
-        if (!error) {
-          existingTables.push(table)
-        }
-      } catch (error) {
-        // Table doesn't exist
-      }
-    }
-
-    if (existingTables.length === tables.length) {
-      return NextResponse.json({
-        success: true,
-        message: "Database already set up",
-        existingTables,
-      })
-    }
-
-    // Insert demo data if tables exist
-    if (existingTables.length > 0) {
-      await insertDemoData(supabase)
-    }
+    const setupTime = Date.now() - startTime
+    logger.info(`Wolf Platform setup completed in ${setupTime}ms`, {
+      tablesCreated: verification.tablesExist,
+      totalTables: verification.totalTables,
+      settingsConfigured: verification.settingsConfigured,
+    })
 
     return NextResponse.json({
       success: true,
-      message: "Database setup completed successfully",
-      tablesFound: existingTables,
-      note: "If tables are missing, please create them manually in your Supabase dashboard using the SQL from database-setup.sql",
+      message: "Wolf Platform database setup completed successfully",
+      details: {
+        tables: result.tablesCreated,
+        configuration: result.dataInserted,
+        verification,
+        setupTime: `${setupTime}ms`,
+        timestamp: new Date().toISOString(),
+        version: config.system.version,
+      },
     })
   } catch (error: any) {
-    console.error("Setup error:", error)
+    const setupTime = Date.now() - startTime
+    logger.critical("Database setup failed", {
+      error: error.message,
+      stack: error.stack,
+      setupTime,
+    })
+
     return NextResponse.json(
       {
         success: false,
-        error: error.message || "Setup failed",
+        error: error.message || "Database setup failed",
+        details: {
+          setupTime: `${setupTime}ms`,
+          timestamp: new Date().toISOString(),
+        },
       },
       { status: 500 },
     )
   }
 }
 
-async function insertDemoData(supabase: any) {
-  try {
-    // Check if demo data already exists
-    const { data: existingUsers } = await supabase.from("users").select("id").eq("email", "admin@wolf.com").limit(1)
-
-    if (existingUsers && existingUsers.length > 0) {
-      return { success: true, message: "Demo data already exists" }
-    }
-
-    // Insert demo users
-    const { data: userData, error: userError } = await supabase
-      .from("users")
-      .insert([
-        {
-          username: "wolf_admin",
-          email: "admin@wolf.com",
-          status: "active",
-          role: "admin",
-          last_login: new Date().toISOString(),
-        },
-        {
-          username: "demo_user",
-          email: "demo@wolf.com",
-          status: "active",
-          role: "user",
-          last_login: new Date().toISOString(),
-        },
-      ])
-      .select()
-
-    if (userError) {
-      console.error("Error inserting demo users:", userError)
-      return { success: false, error: userError.message }
-    }
-
-    // Insert other demo data
-    const adminUser = userData?.find((u) => u.email === "admin@wolf.com")
-
-    if (adminUser) {
-      // Insert demo projects
-      await supabase.from("wolf_projects").insert([
-        {
-          name: "Wolf Platform Core",
-          description: "Main platform development",
-          status: "active",
-          priority: "high",
-          owner_id: adminUser.id,
-          progress: 85,
-        },
-      ])
-
-      // Insert demo analytics
-      await supabase.from("wolf_analytics").insert([
-        {
-          metric_name: "total_users",
-          metric_value: 2,
-          category: "users",
-          trend: "up",
-        },
-      ])
-    }
-
-    return { success: true, message: "Demo data inserted successfully" }
-  } catch (error: any) {
-    console.error("Demo data insertion failed:", error)
-    return { success: false, error: error.message }
+async function verifySetup(supabase: any) {
+  const verification = {
+    tablesExist: 0,
+    totalTables: 0,
+    settingsConfigured: false,
+    rlsEnabled: 0,
+    indexesCreated: 0,
   }
+
+  const requiredTables = [
+    "wolf_settings",
+    "wolf_analytics",
+    "wolf_projects",
+    "wolf_activities",
+    "wolf_notifications",
+    "wolf_logs",
+  ]
+
+  verification.totalTables = requiredTables.length
+
+  // Check tables exist
+  for (const table of requiredTables) {
+    try {
+      const { error } = await supabase.from(table).select("count(*)", { count: "exact", head: true })
+
+      if (!error) {
+        verification.tablesExist++
+      }
+    } catch (error) {
+      // Table doesn't exist
+    }
+  }
+
+  // Check settings
+  try {
+    const { data, error } = await supabase.from("wolf_settings").select("key").eq("key", "setup_completed").single()
+
+    verification.settingsConfigured = !error && data
+  } catch (error) {
+    verification.settingsConfigured = false
+  }
+
+  return verification
 }
