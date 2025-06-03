@@ -33,8 +33,18 @@ import { AdminService, type AdminUser, type AdminActivityLog, type SystemSetting
 import { useAdmin } from "@/hooks/useAdmin"
 import { useAuthContext } from "@/components/auth/auth-provider"
 import { Users, Shield, TrendingUp, UserPlus, Eye, Trash2, Crown, ShieldCheck, UserCheck, Loader2 } from "lucide-react"
-import { formatDistanceToNow } from "date-fns"
 import { Navbar } from "@/components/navbar"
+
+// Helper function to format relative time
+function formatDistanceToNow(date: Date): string {
+  const now = new Date()
+  const diffInSeconds = Math.floor((now.getTime() - date.getTime()) / 1000)
+
+  if (diffInSeconds < 60) return `${diffInSeconds} seconds ago`
+  if (diffInSeconds < 3600) return `${Math.floor(diffInSeconds / 60)} minutes ago`
+  if (diffInSeconds < 86400) return `${Math.floor(diffInSeconds / 3600)} hours ago`
+  return `${Math.floor(diffInSeconds / 86400)} days ago`
+}
 
 export default function AdminPanel() {
   const { user } = useAuthContext()
@@ -411,7 +421,7 @@ export default function AdminPanel() {
                             <TableCell className="text-slate-300">{user.email}</TableCell>
                             <TableCell>{getRoleBadge(user.role)}</TableCell>
                             <TableCell className="text-slate-300">
-                              {formatDistanceToNow(new Date(user.created_at), { addSuffix: true })}
+                              {formatDistanceToNow(new Date(user.created_at))}
                             </TableCell>
                             <TableCell>
                               <div className="flex gap-2">
@@ -554,7 +564,7 @@ export default function AdminPanel() {
                               )}
                             </TableCell>
                             <TableCell className="text-slate-300">
-                              {formatDistanceToNow(new Date(log.created_at), { addSuffix: true })}
+                              {formatDistanceToNow(new Date(log.created_at))}
                             </TableCell>
                           </TableRow>
                         ))
