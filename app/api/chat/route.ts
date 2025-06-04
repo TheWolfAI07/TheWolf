@@ -1,66 +1,118 @@
-import { NextResponse } from "next/server"
-import { streamText } from "ai"
-import { groq } from "@ai-sdk/groq"
-import { createServerSupabaseClient } from "@/lib/supabase"
+import { type NextRequest, NextResponse } from "next/server"
+import { createRouteHandlerClient } from "@supabase/auth-helpers-nextjs"
+import { cookies } from "next/headers"
+import Groq from "groq-sdk"
+import { Redis } from "@upstash/redis"
 
-export async function POST(request: Request) {
+// Initialize GROQ with your API key
+const groq = new Groq({
+  apiKey: process.env.GROQ_API_KEY,
+})
+
+// Initialize Redis with your Upstash credentials
+const redis = new Redis({
+  url: process.env.KV_REST_API_URL!,
+  token: process.env.KV_REST_API_TOKEN!,
+})
+
+export async function POST(request: NextRequest) {
   try {
-    const { message } = await request.json()
+    const { message, userId } = await request.json()
 
-    if (!message) {
-      return NextResponse.json({ success: false, error: "Message is required" }, { status: 400 })
+    if (!message || !userId) {
+      return NextResponse.json({ error: "Message and userId are required" }, { status: 400 })
     }
 
-    // Use Groq for AI responses
-    const { text } = await streamText({
-      model: groq("llama-3.1-70b-versatile"),
-      prompt: `You are Wolf AI, an intelligent assistant for the Wolf Platform. 
-      
-      User message: ${message}
-      
-      Respond helpfully and concisely. If the user asks about platform features, explain what the Wolf Platform can do:
-      - Dashboard analytics and monitoring
-      - Project management
-      - User authentication and profiles  
-      - Real-time chat and notifications
-      - Database management
-      - API endpoints and integrations
-      - Edge Functions for serverless computing
-      
-      Keep responses under 200 words and be friendly but professional.`,
-    })
+    const supabase = createRouteHandlerClient({ cookies })
 
-    // Save chat message to database
-    try {
-      const supabase = createServerSupabaseClient()
-      await supabase.from("wolf_chat_messages").insert([
+    // Verify user is authenticated
+    const {
+      data: { session },
+    } = await supabase.auth.getSession()
+
+    if (!session || session.user.id !== userId) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+    }
+
+    // Check Redis cache first
+    const cacheKey = `chat:${userId}:${Buffer.from(message).toString("base64").slice(0, 20)}`
+    const cachedResponse = await redis.get(cacheKey)
+
+    if (cachedResponse) {
+      console.log("Cache hit for message")
+      return NextResponse.json(cachedResponse)
+    }
+
+    // Get recent conversation context from Supabase
+    const { data: recentMessages } = await supabase
+      .from("chat_messages")
+      .select("content, role")
+      .eq("user_id", userId)
+      .order("created_at", { ascending: false })
+      .limit(10)
+
+    const conversationHistory = recentMessages?.reverse() || []
+
+    // Generate AI response using GROQ
+    const completion = await groq.chat.completions.create({
+      messages: [
         {
-          message,
-          response: text,
-          metadata: { timestamp: new Date().toISOString() },
+          role: "system",
+          content:
+            "You are a helpful AI assistant. Be concise, friendly, and informative. Provide helpful and accurate responses.",
         },
-      ])
-    } catch (dbError) {
-      console.error("Failed to save chat message:", dbError)
+        ...conversationHistory.map((msg) => ({
+          role: msg.role as "user" | "assistant",
+          content: msg.content,
+        })),
+        {
+          role: "user",
+          content: message,
+        },
+      ],
+      model: "llama-3.1-70b-versatile",
+      temperature: 0.7,
+      max_tokens: 1000,
+    })
+
+    const aiResponse = completion.choices[0]?.message?.content || "Sorry, I could not generate a response."
+
+    // Save both messages to Supabase database
+    const { data: userMessage, error: userError } = await supabase
+      .from("chat_messages")
+      .insert({
+        user_id: userId,
+        content: message,
+        role: "user",
+      })
+      .select()
+      .single()
+
+    if (userError) throw userError
+
+    const { data: aiMessage, error: aiError } = await supabase
+      .from("chat_messages")
+      .insert({
+        user_id: userId,
+        content: aiResponse,
+        role: "assistant",
+      })
+      .select()
+      .single()
+
+    if (aiError) throw aiError
+
+    const response = {
+      userMessage,
+      aiMessage,
     }
 
-    return NextResponse.json({
-      success: true,
-      data: {
-        id: Date.now().toString(),
-        type: "ai",
-        message: text,
-        timestamp: new Date().toISOString(),
-      },
-    })
-  } catch (error: any) {
+    // Cache the response in Redis for 1 hour
+    await redis.set(cacheKey, response, { ex: 3600 })
+
+    return NextResponse.json(response)
+  } catch (error) {
     console.error("Chat API error:", error)
-    return NextResponse.json(
-      {
-        success: false,
-        error: error.message || "Chat failed",
-      },
-      { status: 500 },
-    )
+    return NextResponse.json({ error: "Internal server error" }, { status: 500 })
   }
 }

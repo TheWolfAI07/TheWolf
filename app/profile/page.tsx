@@ -1,10 +1,9 @@
 import { createServerComponentClient } from "@supabase/auth-helpers-nextjs"
 import { cookies } from "next/headers"
 import { redirect } from "next/navigation"
-import { ChatInterface } from "@/components/chat-interface"
-import { UserProfile } from "@/components/user-profile"
+import { ProfileForm } from "@/components/profile-form"
 
-export default async function Dashboard() {
+export default async function ProfilePage() {
   const supabase = createServerComponentClient({ cookies })
 
   const {
@@ -15,19 +14,31 @@ export default async function Dashboard() {
     redirect("/")
   }
 
+  // Fetch profile data
+  const { data: profile } = await supabase.from("profiles").select("*").eq("id", session.user.id).single()
+
+  // Fetch user preferences
+  const { data: preferences } = await supabase
+    .from("user_preferences")
+    .select("*")
+    .eq("user_id", session.user.id)
+    .single()
+
   return (
     <div className="min-h-screen bg-gray-50">
       <header className="bg-white shadow-sm border-b">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center py-4">
-            <h1 className="text-2xl font-bold text-gray-900">AI Chat Dashboard</h1>
-            <UserProfile user={session.user} />
+            <h1 className="text-2xl font-bold text-gray-900">Your Profile</h1>
+            <a href="/dashboard" className="text-blue-600 hover:text-blue-800">
+              Back to Dashboard
+            </a>
           </div>
         </div>
       </header>
 
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <ChatInterface userId={session.user.id} />
+        <ProfileForm profile={profile || {}} preferences={preferences || {}} userId={session.user.id} />
       </main>
     </div>
   )
