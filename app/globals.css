@@ -4,58 +4,55 @@
 
 @layer base {
   :root {
-    --background: 0 0% 100%;
-    --foreground: 222.2 84% 4.9%;
-    --card: 0 0% 100%;
-    --card-foreground: 222.2 84% 4.9%;
-    --popover: 0 0% 100%;
-    --popover-foreground: 222.2 84% 4.9%;
-    --primary: 222.2 47.4% 11.2%;
-    --primary-foreground: 210 40% 98%;
-    --secondary: 210 40% 96%;
-    --secondary-foreground: 222.2 47.4% 11.2%;
-    --muted: 210 40% 96%;
-    --muted-foreground: 215.4 16.3% 46.9%;
-    --accent: 210 40% 96%;
-    --accent-foreground: 222.2 47.4% 11.2%;
-    --destructive: 0 84.2% 60.2%;
-    --destructive-foreground: 210 40% 98%;
-    --border: 214.3 31.8% 91.4%;
-    --input: 214.3 31.8% 91.4%;
-    --ring: 222.2 84% 4.9%;
-    --chart-1: 12 76% 61%;
-    --chart-2: 173 58% 39%;
-    --chart-3: 197 37% 24%;
-    --chart-4: 43 74% 66%;
-    --chart-5: 27 87% 67%;
-    --radius: 0.5rem;
-  }
-
-  .dark {
-    --background: 0 0% 3.9%;
-    --foreground: 0 0% 98%;
-    --card: 0 0% 3.9%;
-    --card-foreground: 0 0% 98%;
-    --popover: 0 0% 3.9%;
-    --popover-foreground: 0 0% 98%;
-    --primary: 0 0% 98%;
-    --primary-foreground: 0 0% 9%;
-    --secondary: 0 0% 14.9%;
+    --background: 0 0% 0%;
+    --foreground: 0 0% 100%;
+    --card: 0 0% 3%;
+    --card-foreground: 0 0% 100%;
+    --popover: 0 0% 3%;
+    --popover-foreground: 0 0% 100%;
+    --primary: 180 100% 50%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 240 3.7% 15.9%;
     --secondary-foreground: 0 0% 98%;
-    --muted: 0 0% 14.9%;
-    --muted-foreground: 0 0% 63.9%;
-    --accent: 0 0% 14.9%;
+    --muted: 240 3.7% 15.9%;
+    --muted-foreground: 240 5% 64.9%;
+    --accent: 240 3.7% 15.9%;
     --accent-foreground: 0 0% 98%;
     --destructive: 0 62.8% 30.6%;
     --destructive-foreground: 0 0% 98%;
-    --border: 0 0% 14.9%;
-    --input: 0 0% 14.9%;
-    --ring: 0 0% 83.1%;
-    --chart-1: 220 70% 50%;
-    --chart-2: 160 60% 45%;
-    --chart-3: 30 80% 55%;
-    --chart-4: 280 65% 60%;
-    --chart-5: 340 75% 55%;
+    --border: 240 3.7% 15.9%;
+    --input: 240 3.7% 15.9%;
+    --ring: 180 100% 50%;
+    --radius: 0.5rem;
+
+    /* Wolf Platform Custom Colors */
+    --gunmetal: 200 13% 18%;
+    --dark-gunmetal: 200 13% 12%;
+    --dark-teal: 180 100% 35%;
+    --teal: 180 100% 50%;
+    --gold: 45 100% 50%;
+  }
+
+  .dark {
+    --background: 0 0% 0%;
+    --foreground: 0 0% 100%;
+    --card: 0 0% 3%;
+    --card-foreground: 0 0% 100%;
+    --popover: 0 0% 3%;
+    --popover-foreground: 0 0% 100%;
+    --primary: 180 100% 50%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 240 3.7% 15.9%;
+    --secondary-foreground: 0 0% 98%;
+    --muted: 240 3.7% 15.9%;
+    --muted-foreground: 240 5% 64.9%;
+    --accent: 240 3.7% 15.9%;
+    --accent-foreground: 0 0% 98%;
+    --destructive: 0 62.8% 30.6%;
+    --destructive-foreground: 0 0% 98%;
+    --border: 240 3.7% 15.9%;
+    --input: 240 3.7% 15.9%;
+    --ring: 180 100% 50%;
   }
 }
 
@@ -68,326 +65,167 @@
   }
 }
 
-/* Wolf Platform Color Palette */
-:root {
-  /* Base Colors */
-  --wolf-black: #000000;
-  --wolf-gunmetal: #2c3e50;
-  --wolf-dark-gunmetal: #1a252f;
-  --wolf-shiny-gunmetal: #34495e;
-
-  /* Teal/Aqua (Dark variants) */
-  --wolf-dark-teal: #008b8b;
-  --wolf-teal: #20b2aa;
-  --wolf-aqua: #00ced1;
-
-  /* Gold */
-  --wolf-gold: #d4af37;
-  --wolf-light-gold: #f7dc6f;
-  --wolf-dark-gold: #b7950b;
-}
-
-/* Base Background Classes */
-.bg-wolf-black {
-  background-color: var(--wolf-black);
-}
-.bg-gunmetal {
-  background-color: var(--wolf-gunmetal);
-}
-.bg-dark-gunmetal {
-  background-color: var(--wolf-dark-gunmetal);
-}
-.bg-shiny-gunmetal {
-  background-color: var(--wolf-shiny-gunmetal);
-}
-
-/* Text Colors */
-.text-dark-teal {
-  color: var(--wolf-dark-teal);
-}
-.text-teal {
-  color: var(--wolf-teal);
-}
-.text-aqua {
-  color: var(--wolf-aqua);
-}
-.text-gold {
-  color: var(--wolf-gold);
-}
-.text-light-gold {
-  color: var(--wolf-light-gold);
-}
-.text-dark-gold {
-  color: var(--wolf-dark-gold);
-}
-
-/* Border Colors */
-.border-dark-teal {
-  border-color: var(--wolf-dark-teal);
-}
-.border-teal {
-  border-color: var(--wolf-teal);
-}
-.border-gold {
-  border-color: var(--wolf-gold);
-}
-.border-gunmetal {
-  border-color: var(--wolf-gunmetal);
-}
-
-/* Wolf Platform Gradients */
-.bg-wolf-gradient {
-  background: linear-gradient(135deg, var(--wolf-black) 0%, var(--wolf-dark-gunmetal) 50%, var(--wolf-gunmetal) 100%);
-}
-
-.bg-wolf-card {
-  background: linear-gradient(145deg, var(--wolf-dark-gunmetal) 0%, var(--wolf-gunmetal) 100%);
-  border: 1px solid rgba(139, 139, 139, 0.1);
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
-}
-
-.bg-wolf-card:hover {
-  border: 1px solid var(--wolf-dark-teal);
-  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.6), 0 0 10px rgba(0, 139, 139, 0.2);
-}
-
-/* Metallic Shine Effect */
-.metallic-shine {
-  position: relative;
-  overflow: hidden;
-}
-
-.metallic-shine::after {
-  content: "";
-  position: absolute;
-  top: -50%;
-  left: -50%;
-  width: 200%;
-  height: 200%;
-  background: linear-gradient(45deg, transparent 30%, rgba(255, 255, 255, 0.1) 50%, transparent 70%);
-  transform: rotate(45deg);
-  animation: shine 3s ease-in-out infinite;
-}
-
-@keyframes shine {
-  0% {
-    transform: translateX(-100%) translateY(-100%) rotate(45deg);
+@layer components {
+  /* Wolf Platform Custom Styles */
+  .bg-wolf-gradient {
+    @apply bg-gradient-to-br from-black via-gunmetal to-dark-gunmetal;
   }
-  50% {
-    transform: translateX(0%) translateY(0%) rotate(45deg);
+
+  .text-wolf-heading {
+    @apply bg-gradient-to-r from-teal via-dark-teal to-gold bg-clip-text text-transparent;
   }
-  100% {
-    transform: translateX(100%) translateY(100%) rotate(45deg);
+
+  .bg-wolf-card {
+    @apply bg-gradient-to-br from-black via-gunmetal to-dark-gunmetal bg-opacity-90 backdrop-blur-sm;
+  }
+
+  .wolf-border {
+    @apply border-2 border-dark-teal border-opacity-50;
+  }
+
+  .wolf-border-gold {
+    @apply border-2 border-gold border-opacity-50;
+  }
+
+  .wolf-shadow {
+    @apply shadow-lg;
+    box-shadow: 0 10px 15px -3px rgba(0, 139, 139, 0.2), 0 4px 6px -2px rgba(0, 139, 139, 0.1);
+  }
+
+  .wolf-shadow-lg {
+    @apply shadow-xl;
+    box-shadow: 0 20px 25px -5px rgba(212, 175, 55, 0.2), 0 10px 10px -5px rgba(212, 175, 55, 0.1);
+  }
+
+  .badge-wolf {
+    @apply bg-dark-teal bg-opacity-20 text-dark-teal border border-dark-teal border-opacity-50;
+  }
+
+  .badge-wolf-gold {
+    @apply bg-gold bg-opacity-20 text-gold border border-gold border-opacity-50;
+  }
+
+  .btn-wolf {
+    @apply bg-gradient-to-r from-dark-teal to-teal hover:from-teal hover:to-dark-teal text-white shadow-lg;
+  }
+
+  .progress-wolf {
+    @apply bg-gunmetal;
+  }
+
+  .progress-wolf > div {
+    @apply bg-gradient-to-r from-dark-teal to-gold;
+  }
+
+  .metallic-shine {
+    text-shadow: 0 0 5px rgba(180, 255, 255, 0.3), 0 0 10px rgba(180, 255, 255, 0.2);
+  }
+
+  .animate-wolf-pulse {
+    animation: wolf-pulse 2s ease-in-out infinite;
+  }
+
+  .animate-wolf-glow {
+    animation: wolf-glow 3s ease-in-out infinite;
+  }
+
+  /* Wolf Navigation */
+  .nav-wolf {
+    @apply bg-gradient-to-r from-dark-gunmetal to-gunmetal border-b border-dark-teal;
+  }
+
+  /* Wolf Sidebar */
+  .sidebar-wolf {
+    @apply bg-gradient-to-b from-dark-gunmetal to-gunmetal border-r border-dark-teal;
+  }
+
+  /* Wolf Debug Panel */
+  .debug-wolf {
+    @apply bg-dark-gunmetal bg-opacity-90 border border-dark-teal backdrop-blur-sm;
+  }
+
+  .debug-success {
+    @apply text-teal;
+  }
+
+  .debug-error {
+    @apply text-red-500;
+  }
+
+  .debug-warning {
+    @apply text-gold;
+  }
+
+  /* Wolf Grid Layout */
+  .wolf-grid {
+    background-image: linear-gradient(rgba(0, 139, 139, 0.1) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(0, 139, 139, 0.1) 1px, transparent 1px);
+    background-size: 20px 20px;
+  }
+
+  /* Wolf Status Indicators */
+  .status-critical {
+    @apply text-red-500;
+  }
+
+  .status-warning {
+    @apply text-gold;
+  }
+
+  .status-success {
+    @apply text-teal;
+  }
+
+  .status-info {
+    @apply text-blue-400;
+  }
+
+  /* Wolf Loading Animation */
+  .wolf-loading {
+    position: relative;
+  }
+
+  .wolf-loading::after {
+    content: "🐺";
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    font-size: 2rem;
+    animation: wolfSpin 2s linear infinite;
+  }
+
+  /* Wolf Success Animation */
+  .wolf-success {
+    animation: wolfSuccess 0.6s ease-out;
+  }
+
+  /* Wolf Error Animation */
+  .wolf-error {
+    animation: wolfError 0.5s ease-out;
   }
 }
 
-/* Wolf Button Styles */
-.btn-wolf {
-  background: linear-gradient(145deg, var(--wolf-gunmetal) 0%, var(--wolf-dark-gunmetal) 100%);
-  border: 1px solid var(--wolf-dark-teal);
-  color: var(--wolf-dark-teal);
-  transition: all 0.3s ease;
-}
-
-.btn-wolf:hover {
-  background: linear-gradient(145deg, var(--wolf-dark-gunmetal) 0%, var(--wolf-gunmetal) 100%);
-  border: 1px solid var(--wolf-teal);
-  color: var(--wolf-teal);
-  box-shadow: 0 0 15px rgba(0, 139, 139, 0.3);
-}
-
-.btn-wolf-gold {
-  background: linear-gradient(145deg, var(--wolf-gold) 0%, var(--wolf-light-gold) 100%);
-  color: var(--wolf-black);
-  border: none;
-  transition: all 0.3s ease;
-}
-
-.btn-wolf-gold:hover {
-  background: linear-gradient(145deg, var(--wolf-light-gold) 0%, var(--wolf-gold) 100%);
-  box-shadow: 0 0 15px rgba(212, 175, 55, 0.5);
-}
-
-/* Wolf Input Styles */
-.input-wolf {
-  background: rgba(26, 37, 47, 0.8);
-  border: 1px solid var(--wolf-dark-teal);
-  color: white;
-}
-
-.input-wolf:focus {
-  border: 1px solid var(--wolf-teal);
-  box-shadow: 0 0 0 2px rgba(0, 139, 139, 0.1);
-}
-
-/* Wolf Badge Styles */
-.badge-wolf {
-  background: linear-gradient(145deg, var(--wolf-dark-teal) 0%, var(--wolf-teal) 100%);
-  color: var(--wolf-black);
-}
-
-.badge-wolf-gold {
-  background: linear-gradient(145deg, var(--wolf-gold) 0%, var(--wolf-light-gold) 100%);
-  color: var(--wolf-black);
-}
-
-/* Wolf Progress Bar */
-.progress-wolf {
-  background-color: var(--wolf-dark-gunmetal);
-}
-
-.progress-wolf .progress-bar {
-  background: linear-gradient(90deg, var(--wolf-dark-teal), var(--wolf-gold));
-}
-
-/* Wolf Scrollbar */
-::-webkit-scrollbar {
-  width: 8px;
-}
-
-::-webkit-scrollbar-track {
-  background: var(--wolf-dark-gunmetal);
-}
-
-::-webkit-scrollbar-thumb {
-  background: var(--wolf-dark-teal);
-  border-radius: 4px;
-}
-
-::-webkit-scrollbar-thumb:hover {
-  background: var(--wolf-teal);
-}
-
-/* Wolf Navigation */
-.nav-wolf {
-  background: linear-gradient(90deg, var(--wolf-dark-gunmetal) 0%, var(--wolf-gunmetal) 100%);
-  border-bottom: 1px solid var(--wolf-dark-teal);
-}
-
-/* Wolf Sidebar */
-.sidebar-wolf {
-  background: linear-gradient(180deg, var(--wolf-dark-gunmetal) 0%, var(--wolf-gunmetal) 100%);
-  border-right: 1px solid var(--wolf-dark-teal);
-}
-
-/* Wolf Debug Panel */
-.debug-wolf {
-  background: rgba(26, 37, 47, 0.9);
-  border: 1px solid var(--wolf-dark-teal);
-  backdrop-filter: blur(10px);
-}
-
-.debug-success {
-  color: var(--wolf-teal);
-}
-.debug-error {
-  color: #ff5252;
-}
-.debug-warning {
-  color: var(--wolf-gold);
-}
-
-/* Wolf Animation Classes */
-.animate-wolf-pulse {
-  animation: wolfPulse 2s ease-in-out infinite;
-}
-
-@keyframes wolfPulse {
+@keyframes wolf-pulse {
   0%,
   100% {
+    transform: scale(1);
     opacity: 1;
   }
   50% {
-    opacity: 0.7;
+    transform: scale(1.05);
+    opacity: 0.9;
   }
 }
 
-.animate-wolf-glow {
-  animation: wolfGlow 3s ease-in-out infinite;
-}
-
-@keyframes wolfGlow {
+@keyframes wolf-glow {
   0%,
   100% {
-    box-shadow: 0 0 5px var(--wolf-dark-teal);
+    box-shadow: 0 0 5px rgba(180, 255, 255, 0.3), 0 0 10px rgba(180, 255, 255, 0.2);
   }
   50% {
-    box-shadow: 0 0 20px var(--wolf-teal), 0 0 30px var(--wolf-dark-teal);
+    box-shadow: 0 0 10px rgba(180, 255, 255, 0.5), 0 0 20px rgba(180, 255, 255, 0.3);
   }
-}
-
-/* Wolf Grid Layout */
-.wolf-grid {
-  background-image: linear-gradient(rgba(0, 139, 139, 0.1) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(0, 139, 139, 0.1) 1px, transparent 1px);
-  background-size: 20px 20px;
-}
-
-/* Wolf Status Indicators */
-.status-critical {
-  color: #ff5252;
-}
-.status-warning {
-  color: var(--wolf-gold);
-}
-.status-success {
-  color: var(--wolf-teal);
-}
-.status-info {
-  color: var(--wolf-aqua);
-}
-
-/* Wolf Typography */
-.text-wolf-heading {
-  background: linear-gradient(45deg, var(--wolf-teal), var(--wolf-gold));
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
-}
-
-/* Wolf Utility Classes */
-.wolf-shadow {
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
-}
-
-.wolf-shadow-lg {
-  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.6), 0 0 10px rgba(0, 139, 139, 0.2);
-}
-
-.wolf-border {
-  border: 1px solid var(--wolf-dark-teal);
-}
-
-.wolf-border-gold {
-  border: 1px solid var(--wolf-gold);
-}
-
-/* Wolf Responsive Utilities */
-@media (max-width: 768px) {
-  .wolf-mobile-hide {
-    display: none;
-  }
-}
-
-@media (min-width: 769px) {
-  .wolf-desktop-only {
-    display: block;
-  }
-}
-
-/* Wolf Loading Animation */
-.wolf-loading {
-  position: relative;
-}
-
-.wolf-loading::after {
-  content: "🐺";
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-  font-size: 2rem;
-  animation: wolfSpin 2s linear infinite;
 }
 
 @keyframes wolfSpin {
@@ -397,11 +235,6 @@
   to {
     transform: translate(-50%, -50%) rotate(360deg);
   }
-}
-
-/* Wolf Success Animation */
-.wolf-success {
-  animation: wolfSuccess 0.6s ease-out;
 }
 
 @keyframes wolfSuccess {
@@ -418,11 +251,6 @@
   }
 }
 
-/* Wolf Error Animation */
-.wolf-error {
-  animation: wolfError 0.5s ease-out;
-}
-
 @keyframes wolfError {
   0%,
   100% {
@@ -434,4 +262,47 @@
   75% {
     transform: translateX(5px);
   }
+}
+
+@layer utilities {
+  .animate-gradient {
+    background-size: 200% 200%;
+    animation: gradient 8s ease infinite;
+  }
+
+  @keyframes gradient {
+    0% {
+      background-position: 0% 50%;
+    }
+    50% {
+      background-position: 100% 50%;
+    }
+    100% {
+      background-position: 0% 50%;
+    }
+  }
+
+  .bg-grid-pattern {
+    background-image: linear-gradient(to right, rgba(30, 41, 59, 0.1) 1px, transparent 1px),
+      linear-gradient(to bottom, rgba(30, 41, 59, 0.1) 1px, transparent 1px);
+    background-size: 40px 40px;
+  }
+}
+
+/* Custom Scrollbar */
+::-webkit-scrollbar {
+  width: 10px;
+}
+
+::-webkit-scrollbar-track {
+  background: #0f172a;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #334155;
+  border-radius: 5px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #475569;
 }

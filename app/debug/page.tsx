@@ -1,29 +1,19 @@
-"use client"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import ComprehensiveRealDebug from "./comprehensive-debug"
-import FinalLaunchCheck from "./final-launch-check"
+import PreLaunchFinalDebug from "./pre-launch-final-debug"
 
 export default function DebugPage() {
   return (
-    <div className="container mx-auto p-6 space-y-6">
-      <div className="flex items-center justify-center">
-        <h1 className="text-3xl font-bold text-center bg-gradient-to-r from-cyan-400 to-blue-400 bg-clip-text text-transparent">
-          Wolf Platform Debug Center
-        </h1>
-      </div>
+    <div className="min-h-screen bg-gradient-to-br from-black via-gunmetal to-dark-gunmetal p-6">
+      <div className="max-w-7xl mx-auto">
+        <div className="text-center mb-8">
+          <div className="flex items-center justify-center gap-4 mb-4">
+            <div className="text-6xl animate-wolf-pulse">🐺</div>
+            <h1 className="text-4xl font-bold text-wolf-heading metallic-shine">Wolf Platform Debug Center</h1>
+          </div>
+          <p className="text-xl text-slate-300">Pre-Launch Subscription Platform Verification</p>
+        </div>
 
-      <Tabs defaultValue="launch" className="space-y-4">
-        <TabsList className="grid w-full grid-cols-2">
-          <TabsTrigger value="system">System Debug</TabsTrigger>
-          <TabsTrigger value="launch">Launch Check</TabsTrigger>
-        </TabsList>
-        <TabsContent value="system">
-          <ComprehensiveRealDebug />
-        </TabsContent>
-        <TabsContent value="launch">
-          <FinalLaunchCheck />
-        </TabsContent>
-      </Tabs>
+        <PreLaunchFinalDebug />
+      </div>
     </div>
   )
 }

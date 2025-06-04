@@ -1,319 +1,288 @@
-"use client"
-
-import { useState, useEffect } from "react"
-import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Badge } from "@/components/ui/badge"
-import { Progress } from "@/components/ui/progress"
-import {
-  Activity,
-  BarChart3,
-  CheckCircle,
-  Database,
-  Globe,
-  Settings,
-  RefreshCw,
-  TrendingUp,
-  Clock,
-  Star,
-  Crown,
-  Zap,
-  Shield,
-  Dog,
-} from "lucide-react"
+import { Navbar } from "@/components/navbar"
 import Link from "next/link"
+import { Button } from "@/components/ui/button"
+import { Badge } from "@/components/ui/badge"
+import { Crown, BarChart3, Settings, Activity, Shield, Zap, Lock, Globe, Brain } from "lucide-react"
 
 export default function HomePage() {
-  const [loading, setLoading] = useState(true)
-  const [systemStatus, setSystemStatus] = useState({
-    status: "healthy",
-    message: "🐺 Wolf Platform Ready",
-    version: "2.0.0",
-    environment: {
-      nodeEnv: "production",
-      hasSupabaseUrl: true,
-      hasSupabaseKey: true,
-      platform: "vercel",
-    },
-  })
-
-  useEffect(() => {
-    // Simulate loading
-    const timer = setTimeout(() => {
-      setLoading(false)
-    }, 2000)
-
-    return () => clearTimeout(timer)
-  }, [])
-
-  if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-black via-slate-900 to-slate-800">
-        <div className="text-center relative">
-          <div className="relative mb-8">
-            <div className="absolute inset-0 bg-gradient-to-r from-cyan-400/20 to-blue-500/20 rounded-full blur-xl animate-pulse"></div>
-            <div className="relative bg-gradient-to-r from-slate-800 to-slate-700 p-6 rounded-full border border-cyan-400/30 shadow-2xl shadow-cyan-500/20">
-              <Dog className="h-16 w-16 mx-auto text-cyan-400 animate-pulse" />
-              <div className="absolute inset-0 flex items-center justify-center">
-                <RefreshCw className="h-6 w-6 animate-spin text-yellow-400" />
-              </div>
-            </div>
-          </div>
-          <h2 className="text-4xl font-bold bg-gradient-to-r from-cyan-400 via-blue-400 to-cyan-300 bg-clip-text text-transparent mb-4">
-            🐺 Wolf Platform
-          </h2>
-          <p className="text-xl text-slate-300 mb-2">Initializing Enterprise Platform...</p>
-          <p className="text-sm text-slate-400 mb-6">Loading luxury components</p>
-          <div className="w-80 mx-auto mb-4">
-            <Progress value={75} className="h-2 bg-slate-700" />
-          </div>
-        </div>
-      </div>
-    )
-  }
-
   return (
     <div className="min-h-screen bg-gradient-to-br from-black via-slate-900 to-slate-800 text-white">
-      {/* Floating particles */}
-      <div className="fixed inset-0 pointer-events-none overflow-hidden z-0">
-        <div className="absolute top-1/4 left-1/4 w-1 h-1 bg-yellow-400 rounded-full animate-ping opacity-60"></div>
+      <Navbar />
+
+      {/* Hero Section */}
+      <div className="relative min-h-screen flex items-center justify-center overflow-hidden">
+        {/* Animated Background Grid */}
+        <div className="absolute inset-0 wolf-grid opacity-30"></div>
+
+        {/* Floating Orbs */}
+        <div className="absolute top-1/4 left-1/4 w-64 h-64 bg-cyan-500/10 rounded-full filter blur-3xl animate-wolf-pulse"></div>
         <div
-          className="absolute top-1/3 right-1/3 w-1 h-1 bg-yellow-400 rounded-full animate-ping opacity-40"
+          className="absolute bottom-1/4 right-1/4 w-64 h-64 bg-blue-500/10 rounded-full filter blur-3xl animate-wolf-pulse"
           style={{ animationDelay: "1s" }}
         ></div>
         <div
-          className="absolute bottom-1/4 left-1/3 w-1 h-1 bg-yellow-400 rounded-full animate-ping opacity-50"
+          className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-96 h-96 bg-purple-500/5 rounded-full filter blur-3xl animate-wolf-pulse"
           style={{ animationDelay: "2s" }}
         ></div>
-      </div>
 
-      {/* Navigation */}
-      <nav className="relative z-10 border-b border-slate-700 bg-gradient-to-r from-slate-900/90 to-slate-800/90 backdrop-blur-sm">
-        <div className="container mx-auto px-6 py-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-4">
-              <div className="relative">
-                <Crown className="absolute -top-1 -right-1 h-4 w-4 text-yellow-400" />
-              </div>
-              <div>
-                <h1 className="text-xl font-bold bg-gradient-to-r from-cyan-400 to-blue-400 bg-clip-text text-transparent">
-                  Wolf Platform
-                </h1>
-                <p className="text-xs text-yellow-400">LUXURY EDITION</p>
+        {/* Content */}
+        <div className="relative z-10 max-w-7xl mx-auto px-6 py-24">
+          <div className="text-center mb-16">
+            {/* Premium Logo */}
+            <div className="mb-8 relative">
+              <div className="inline-block relative">
+                <div className="absolute -inset-2 rounded-full bg-gradient-to-r from-cyan-500 to-blue-600 blur-xl opacity-50 animate-wolf-glow"></div>
+                <div className="absolute -inset-1 rounded-full bg-gradient-to-r from-gold/30 to-cyan-400/30 blur-md opacity-40 animate-pulse"></div>
+                <div className="relative bg-black rounded-full p-8 border-2 border-cyan-500/30 shadow-2xl shadow-cyan-500/30">
+                  <div className="flex items-center justify-center">
+                    <div className="w-16 h-16">{/* Custom logo will go here */}</div>
+                  </div>
+                </div>
               </div>
             </div>
-            <div className="flex items-center space-x-4">
-              <Badge className="bg-emerald-500/20 text-emerald-300 border border-emerald-400/50">
-                <CheckCircle className="h-3 w-3 mr-1" />
-                LIVE
+
+            {/* Premium Title */}
+            <h1 className="text-7xl md:text-9xl font-bold mb-6 tracking-tight">
+              <span className="bg-gradient-to-r from-cyan-300 via-blue-500 to-purple-600 bg-clip-text text-transparent animate-gradient metallic-shine">
+                WOLF PLATFORM
+              </span>
+            </h1>
+
+            {/* Luxury Subtitle */}
+            <div className="flex items-center justify-center mb-8">
+              <div className="h-px w-16 bg-gradient-to-r from-transparent via-gold to-transparent"></div>
+              <p className="px-6 text-gold text-2xl tracking-[0.3em] font-light">ENTERPRISE EDITION</p>
+              <div className="h-px w-16 bg-gradient-to-l from-transparent via-gold to-transparent"></div>
+            </div>
+
+            {/* Status Badges */}
+            <div className="flex flex-wrap justify-center gap-4 mb-12">
+              <Badge className="bg-emerald-500/20 text-emerald-300 border border-emerald-400/50 px-4 py-2 text-sm font-medium">
+                <Activity className="h-4 w-4 mr-2" />
+                SYSTEM ONLINE
               </Badge>
-              <Link href="/dashboard">
-                <Button variant="outline" size="sm" className="border-cyan-400/50 text-cyan-300 hover:bg-cyan-400/10">
-                  Dashboard
-                </Button>
-              </Link>
-              <Link href="/console">
-                <Button
-                  size="sm"
-                  className="bg-gradient-to-r from-cyan-500 to-blue-500 hover:from-cyan-600 hover:to-blue-600"
-                >
-                  Console
-                </Button>
-              </Link>
-            </div>
-          </div>
-        </div>
-      </nav>
-
-      {/* Hero Section */}
-      <section className="relative py-20 px-6 overflow-hidden">
-        <div className="container mx-auto text-center relative z-10">
-          <div className="mb-8">
-            <div className="flex items-center justify-center mb-6">
-              <div>
-                <h1 className="text-6xl md:text-8xl font-bold bg-gradient-to-r from-cyan-400 via-blue-400 to-cyan-300 bg-clip-text text-transparent">
-                  Wolf Platform
-                </h1>
-                <p className="text-lg text-yellow-400 font-semibold mt-2">ENTERPRISE EDITION</p>
-              </div>
+              <Badge className="bg-blue-500/20 text-blue-300 border border-blue-400/50 px-4 py-2 text-sm font-medium">
+                <Shield className="h-4 w-4 mr-2" />
+                ENTERPRISE READY
+              </Badge>
+              <Badge className="bg-purple-500/20 text-purple-300 border border-purple-400/50 px-4 py-2 text-sm font-medium">
+                <Crown className="h-4 w-4 mr-2" />
+                v2.0 RELEASE
+              </Badge>
             </div>
 
-            <p className="text-xl md:text-2xl text-slate-300 max-w-4xl mx-auto mb-8 leading-relaxed">
+            {/* Description */}
+            <p className="text-xl md:text-2xl text-slate-300 max-w-4xl mx-auto mb-16 leading-relaxed">
               Next-generation AI-powered platform management with{" "}
               <span className="text-cyan-400 font-semibold">real-time analytics</span>,{" "}
-              <span className="text-yellow-400 font-semibold">intelligent automation</span>, and{" "}
+              <span className="text-gold font-semibold">intelligent automation</span>, and{" "}
               <span className="text-blue-400 font-semibold">enterprise-grade infrastructure</span>.
             </p>
+          </div>
 
-            {/* Feature Badges */}
-            <div className="flex flex-wrap justify-center gap-4 mb-8">
-              <Badge className="bg-gradient-to-r from-slate-800/90 to-slate-700/90 backdrop-blur-sm text-cyan-300 border border-cyan-400/50 px-6 py-3 text-sm shadow-lg shadow-cyan-500/20">
-                <Zap className="h-4 w-4 mr-2 text-yellow-400" />
-                Real-time Analytics
-              </Badge>
-              <Badge className="bg-gradient-to-r from-slate-800/90 to-slate-700/90 backdrop-blur-sm text-cyan-300 border border-yellow-400/50 px-6 py-3 text-sm shadow-lg shadow-yellow-500/20">
-                <Zap className="h-4 w-4 mr-2 text-yellow-400" />
-                AI-Powered Insights
-              </Badge>
-              <Badge className="bg-gradient-to-r from-slate-800/90 to-slate-700/90 backdrop-blur-sm text-cyan-300 border border-pink-400/50 px-6 py-3 text-sm shadow-lg shadow-pink-500/20">
-                <Shield className="h-4 w-4 mr-2 text-pink-400" />
-                Enterprise Security
-              </Badge>
-              <Badge className="bg-gradient-to-r from-slate-800/90 to-slate-700/90 backdrop-blur-sm text-cyan-300 border border-cyan-400/50 px-6 py-3 text-sm shadow-lg shadow-cyan-500/20">
-                <Database className="h-4 w-4 mr-2 text-cyan-400" />
-                Database Powered
-              </Badge>
+          {/* Premium Feature Grid */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8 mb-20">
+            {/* Feature 1 - Real-time Analytics */}
+            <div className="group relative bg-wolf-card rounded-2xl overflow-hidden wolf-border hover:wolf-border-gold transition-all duration-500 wolf-shadow hover:wolf-shadow-lg">
+              <div className="absolute inset-0 bg-gradient-to-br from-cyan-500/5 to-blue-600/5 opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
+              <div className="p-8 relative z-10">
+                <div className="w-16 h-16 bg-gradient-to-br from-cyan-500 to-blue-600 rounded-xl flex items-center justify-center mb-6 shadow-lg shadow-cyan-500/25 group-hover:shadow-cyan-500/50 transition-all duration-300">
+                  <Zap className="h-8 w-8 text-white" />
+                </div>
+                <h3 className="text-xl font-bold text-white mb-3 group-hover:text-cyan-300 transition-colors">
+                  Real-time Analytics
+                </h3>
+                <p className="text-slate-400 group-hover:text-slate-300 transition-colors">
+                  Advanced metrics and insights with millisecond precision for enterprise decision making.
+                </p>
+              </div>
+            </div>
+
+            {/* Feature 2 - AI Intelligence */}
+            <div className="group relative bg-wolf-card rounded-2xl overflow-hidden wolf-border hover:wolf-border-gold transition-all duration-500 wolf-shadow hover:wolf-shadow-lg">
+              <div className="absolute inset-0 bg-gradient-to-br from-gold/5 to-amber-600/5 opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
+              <div className="p-8 relative z-10">
+                <div className="w-16 h-16 bg-gradient-to-br from-gold to-amber-600 rounded-xl flex items-center justify-center mb-6 shadow-lg shadow-gold/25 group-hover:shadow-gold/50 transition-all duration-300">
+                  <Brain className="h-8 w-8 text-white" />
+                </div>
+                <h3 className="text-xl font-bold text-white mb-3 group-hover:text-gold transition-colors">
+                  AI-Powered Intelligence
+                </h3>
+                <p className="text-slate-400 group-hover:text-slate-300 transition-colors">
+                  Advanced machine learning algorithms delivering predictive intelligence and automation.
+                </p>
+              </div>
+            </div>
+
+            {/* Feature 3 - Enterprise Security */}
+            <div className="group relative bg-wolf-card rounded-2xl overflow-hidden wolf-border hover:wolf-border-gold transition-all duration-500 wolf-shadow hover:wolf-shadow-lg">
+              <div className="absolute inset-0 bg-gradient-to-br from-purple-500/5 to-pink-600/5 opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
+              <div className="p-8 relative z-10">
+                <div className="w-16 h-16 bg-gradient-to-br from-purple-500 to-pink-600 rounded-xl flex items-center justify-center mb-6 shadow-lg shadow-purple-500/25 group-hover:shadow-purple-500/50 transition-all duration-300">
+                  <Lock className="h-8 w-8 text-white" />
+                </div>
+                <h3 className="text-xl font-bold text-white mb-3 group-hover:text-purple-300 transition-colors">
+                  Enterprise Security
+                </h3>
+                <p className="text-slate-400 group-hover:text-slate-300 transition-colors">
+                  Military-grade encryption and compliance with global security standards and protocols.
+                </p>
+              </div>
+            </div>
+
+            {/* Feature 4 - Global Infrastructure */}
+            <div className="group relative bg-wolf-card rounded-2xl overflow-hidden wolf-border hover:wolf-border-gold transition-all duration-500 wolf-shadow hover:wolf-shadow-lg">
+              <div className="absolute inset-0 bg-gradient-to-br from-emerald-500/5 to-green-600/5 opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
+              <div className="p-8 relative z-10">
+                <div className="w-16 h-16 bg-gradient-to-br from-emerald-500 to-green-600 rounded-xl flex items-center justify-center mb-6 shadow-lg shadow-emerald-500/25 group-hover:shadow-emerald-500/50 transition-all duration-300">
+                  <Globe className="h-8 w-8 text-white" />
+                </div>
+                <h3 className="text-xl font-bold text-white mb-3 group-hover:text-emerald-300 transition-colors">
+                  Global Infrastructure
+                </h3>
+                <p className="text-slate-400 group-hover:text-slate-300 transition-colors">
+                  High-performance distributed architecture with global replication and redundancy.
+                </p>
+              </div>
             </div>
           </div>
 
-          {/* System Status */}
-          <div className="mb-8">
-            <Card className="max-w-4xl mx-auto bg-gradient-to-r from-slate-800/90 to-slate-700/90 backdrop-blur-sm border-2 border-cyan-400/30 text-white shadow-2xl shadow-cyan-500/20">
-              <CardContent className="pt-8">
-                <div className="flex items-center justify-center gap-6 mb-8">
-                  <CheckCircle className="h-6 w-6 text-emerald-400" />
-                  <span className="font-bold text-2xl text-cyan-300">{systemStatus.message}</span>
-                  <Badge className="border-2 border-yellow-400/50 text-yellow-300 bg-yellow-400/10 shadow-lg shadow-yellow-500/20 px-4 py-2">
-                    <Star className="h-4 w-4 mr-1" />v{systemStatus.version}
-                  </Badge>
-                  <Badge className="border-2 border-emerald-400/50 text-emerald-300 bg-emerald-400/10 shadow-lg shadow-emerald-500/20 px-4 py-2">
-                    <CheckCircle className="h-4 w-4 mr-1" />
-                    DEPLOYED
-                  </Badge>
-                </div>
+          {/* Premium Call to Action */}
+          <div className="text-center mb-20">
+            <div className="flex flex-col sm:flex-row gap-6 justify-center items-center">
+              <Link href="/dashboard">
+                <Button className="group relative px-10 py-6 bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-600 hover:to-blue-700 text-white text-lg font-semibold rounded-xl shadow-xl shadow-cyan-500/25 hover:shadow-cyan-500/40 transition-all duration-300 transform hover:scale-105">
+                  <BarChart3 className="h-5 w-5 mr-3" />
+                  Launch Dashboard
+                  <div className="absolute inset-0 rounded-xl bg-gradient-to-r from-cyan-400 to-blue-500 opacity-0 group-hover:opacity-20 transition-opacity duration-300"></div>
+                </Button>
+              </Link>
 
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-6 text-sm mb-6">
-                  <div className="text-center p-4 bg-gradient-to-r from-slate-700/50 to-slate-600/50 rounded-xl border border-cyan-400/30">
-                    <CheckCircle className="h-6 w-6 mx-auto mb-3 text-emerald-400" />
-                    <p className="font-semibold text-cyan-300">Environment</p>
-                    <p className="text-xs text-slate-300">{systemStatus.environment.nodeEnv}</p>
-                  </div>
-                  <div className="text-center p-4 bg-gradient-to-r from-slate-700/50 to-slate-600/50 rounded-xl border border-emerald-400/30">
-                    <CheckCircle className="h-6 w-6 mx-auto mb-3 text-emerald-400" />
-                    <p className="font-semibold text-cyan-300">Platform</p>
-                    <p className="text-xs text-slate-300">{systemStatus.environment.platform}</p>
-                  </div>
-                  <div className="text-center p-4 bg-gradient-to-r from-slate-700/50 to-slate-600/50 rounded-xl border border-blue-400/30">
-                    <CheckCircle className="h-6 w-6 mx-auto mb-3 text-emerald-400" />
-                    <p className="font-semibold text-cyan-300">Status</p>
-                    <p className="text-xs text-slate-300">Operational</p>
-                  </div>
-                  <div className="text-center p-4 bg-gradient-to-r from-slate-700/50 to-slate-600/50 rounded-xl border border-yellow-400/30">
-                    <CheckCircle className="h-6 w-6 mx-auto mb-3 text-emerald-400" />
-                    <p className="font-semibold text-cyan-300">Version</p>
-                    <p className="text-xs text-slate-300">Latest</p>
-                  </div>
-                </div>
+              <Link href="/console">
+                <Button
+                  variant="outline"
+                  className="px-10 py-6 border-2 border-gold/50 text-gold hover:bg-gold/10 text-lg font-semibold rounded-xl transition-all duration-300 transform hover:scale-105"
+                >
+                  <Settings className="h-5 w-5 mr-3" />
+                  Access Console
+                </Button>
+              </Link>
 
-                <div className="flex flex-wrap justify-center gap-6 text-sm text-slate-400">
-                  <span className="flex items-center gap-2">
-                    <Clock className="h-4 w-4 text-cyan-400" />
-                    Updated: {new Date().toLocaleTimeString()}
-                  </span>
-                  <span className="flex items-center gap-2">
-                    <Globe className="h-4 w-4 text-blue-400" />
-                    Global CDN
-                  </span>
-                </div>
-              </CardContent>
-            </Card>
+              <Link href="/auth/signin">
+                <Button
+                  variant="outline"
+                  className="px-10 py-6 border-2 border-slate-600 text-slate-300 hover:bg-slate-800 text-lg font-semibold rounded-xl transition-all duration-300 transform hover:scale-105"
+                >
+                  <Shield className="h-5 w-5 mr-3" />
+                  Enterprise Login
+                </Button>
+              </Link>
+            </div>
           </div>
 
-          {/* Quick Actions */}
-          <div className="flex flex-wrap justify-center gap-6">
-            <Link href="/console">
-              <Button
-                size="lg"
-                className="bg-gradient-to-r from-cyan-500 to-blue-500 text-white hover:from-cyan-600 hover:to-blue-600 shadow-lg shadow-cyan-500/25 border-2 border-yellow-400/50 px-8 py-4 text-lg font-semibold hover:scale-105 transition-all"
-              >
-                <Settings className="h-6 w-6 mr-3" />
-                Open Console
-              </Button>
-            </Link>
-            <Link href="/dashboard">
-              <Button
-                size="lg"
-                variant="outline"
-                className="border-2 border-cyan-400/50 text-cyan-300 hover:bg-cyan-400/10 backdrop-blur-sm shadow-lg shadow-cyan-500/20 px-8 py-4 text-lg font-semibold hover:scale-105 transition-all"
-              >
-                <BarChart3 className="h-6 w-6 mr-3" />
-                View Dashboard
-              </Button>
-            </Link>
-            <Link href="/docs">
-              <Button
-                size="lg"
-                variant="outline"
-                className="border-2 border-yellow-400/50 text-yellow-300 hover:bg-yellow-400/10 backdrop-blur-sm shadow-lg shadow-yellow-500/20 px-8 py-4 text-lg font-semibold hover:scale-105 transition-all"
-              >
-                <Globe className="h-6 w-6 mr-3" />
-                Documentation
-              </Button>
-            </Link>
-          </div>
-        </div>
-      </section>
+          {/* Premium System Status Dashboard */}
+          <div className="max-w-6xl mx-auto">
+            <div className="bg-wolf-card rounded-3xl overflow-hidden wolf-border shadow-2xl">
+              <div className="p-8">
+                <div className="flex items-center justify-between mb-8">
+                  <h3 className="text-2xl font-bold text-white flex items-center">
+                    <Activity className="h-6 w-6 mr-3 text-emerald-400" />
+                    System Status Dashboard
+                  </h3>
+                  <div className="flex items-center">
+                    <div className="w-3 h-3 bg-emerald-500 rounded-full mr-3 animate-pulse"></div>
+                    <span className="text-emerald-400 font-semibold">All Systems Operational</span>
+                  </div>
+                </div>
 
-      {/* Stats Section */}
-      <section className="py-16 px-6 relative z-10">
-        <div className="container mx-auto">
-          <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4 mb-8">
-            <Card className="hover:shadow-lg hover:shadow-cyan-500/20 transition-all duration-300 border-2 border-cyan-400/30 bg-gradient-to-r from-slate-800/90 to-slate-700/90 backdrop-blur-sm hover:scale-105">
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium text-cyan-300">Platform Status</CardTitle>
-                <Activity className="h-5 w-5 text-yellow-400" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-3xl font-bold text-emerald-400">LIVE</div>
-                <p className="text-xs text-slate-400">Fully operational</p>
-              </CardContent>
-            </Card>
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
+                  <div className="bg-slate-900/50 rounded-xl p-6 border border-slate-700/50 hover:border-emerald-500/30 transition-colors">
+                    <div className="flex items-center justify-between mb-3">
+                      <span className="text-slate-400 font-medium">System Uptime</span>
+                      <Badge className="bg-emerald-500/20 text-emerald-300 border-emerald-400/50 text-xs">
+                        OPTIMAL
+                      </Badge>
+                    </div>
+                    <div className="text-3xl font-bold text-white mb-2">99.99%</div>
+                    <div className="h-2 bg-slate-700 rounded-full overflow-hidden">
+                      <div
+                        className="h-full bg-gradient-to-r from-emerald-500 to-emerald-400 rounded-full"
+                        style={{ width: "99.99%" }}
+                      ></div>
+                    </div>
+                  </div>
 
-            <Card className="hover:shadow-lg hover:shadow-emerald-500/20 transition-all duration-300 border-2 border-emerald-400/30 bg-gradient-to-r from-slate-800/90 to-slate-700/90 backdrop-blur-sm hover:scale-105">
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium text-cyan-300">Deployment</CardTitle>
-                <CheckCircle className="h-5 w-5 text-yellow-400" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-3xl font-bold text-emerald-400">SUCCESS</div>
-                <p className="text-xs text-slate-400">Latest version deployed</p>
-              </CardContent>
-            </Card>
+                  <div className="bg-slate-900/50 rounded-xl p-6 border border-slate-700/50 hover:border-cyan-500/30 transition-colors">
+                    <div className="flex items-center justify-between mb-3">
+                      <span className="text-slate-400 font-medium">API Response</span>
+                      <Badge className="bg-cyan-500/20 text-cyan-300 border-cyan-400/50 text-xs">FAST</Badge>
+                    </div>
+                    <div className="text-3xl font-bold text-white mb-2">47ms</div>
+                    <div className="h-2 bg-slate-700 rounded-full overflow-hidden">
+                      <div
+                        className="h-full bg-gradient-to-r from-cyan-500 to-blue-500 rounded-full"
+                        style={{ width: "95%" }}
+                      ></div>
+                    </div>
+                  </div>
 
-            <Card className="hover:shadow-lg hover:shadow-purple-500/20 transition-all duration-300 border-2 border-purple-400/30 bg-gradient-to-r from-slate-800/90 to-slate-700/90 backdrop-blur-sm hover:scale-105">
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium text-cyan-300">Performance</CardTitle>
-                <TrendingUp className="h-5 w-5 text-yellow-400" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-3xl font-bold text-purple-400">99%</div>
-                <Progress value={99} className="mt-3 h-2 bg-slate-700" />
-              </CardContent>
-            </Card>
+                  <div className="bg-slate-900/50 rounded-xl p-6 border border-slate-700/50 hover:border-blue-500/30 transition-colors">
+                    <div className="flex items-center justify-between mb-3">
+                      <span className="text-slate-400 font-medium">Database</span>
+                      <Badge className="bg-blue-500/20 text-blue-300 border-blue-400/50 text-xs">STABLE</Badge>
+                    </div>
+                    <div className="text-3xl font-bold text-white mb-2">Optimal</div>
+                    <div className="h-2 bg-slate-700 rounded-full overflow-hidden">
+                      <div
+                        className="h-full bg-gradient-to-r from-blue-500 to-purple-500 rounded-full"
+                        style={{ width: "98%" }}
+                      ></div>
+                    </div>
+                  </div>
 
-            <Card className="hover:shadow-lg hover:shadow-orange-500/20 transition-all duration-300 border-2 border-orange-400/30 bg-gradient-to-r from-slate-800/90 to-slate-700/90 backdrop-blur-sm hover:scale-105">
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium text-cyan-300">Uptime</CardTitle>
-                <Clock className="h-5 w-5 text-yellow-400" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-3xl font-bold text-orange-400">100%</div>
-                <p className="text-xs text-slate-400">24/7 availability</p>
-              </CardContent>
-            </Card>
+                  <div className="bg-slate-900/50 rounded-xl p-6 border border-slate-700/50 hover:border-purple-500/30 transition-colors">
+                    <div className="flex items-center justify-between mb-3">
+                      <span className="text-slate-400 font-medium">Active Users</span>
+                      <Badge className="bg-purple-500/20 text-purple-300 border-purple-400/50 text-xs">GROWING</Badge>
+                    </div>
+                    <div className="text-3xl font-bold text-white mb-2">2.4K+</div>
+                    <div className="h-2 bg-slate-700 rounded-full overflow-hidden">
+                      <div
+                        className="h-full bg-gradient-to-r from-purple-500 to-pink-500 rounded-full"
+                        style={{ width: "87%" }}
+                      ></div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
-      </section>
+      </div>
 
-      {/* Footer */}
-      <footer className="py-8 px-6 border-t border-slate-700 bg-gradient-to-r from-slate-900 to-slate-800 relative z-10">
-        <div className="container mx-auto text-center">
-          <p className="text-sm text-slate-400">
-            🐺 Wolf Platform v{systemStatus.version} ENTERPRISE EDITION - Deployed Successfully
-          </p>
-          <p className="text-xs text-slate-500 mt-1">
-            Enterprise platform management solution • {new Date().toLocaleDateString()}
-          </p>
+      {/* Premium Footer */}
+      <footer className="relative bg-black/50 backdrop-blur-sm border-t border-slate-800">
+        <div className="max-w-7xl mx-auto px-6 py-12">
+          <div className="flex flex-col md:flex-row justify-between items-center">
+            <div className="flex items-center mb-6 md:mb-0">
+              <div className="flex items-center">
+                <div className="w-8 h-8 text-cyan-400 mr-3">{/* Custom logo will go here */}</div>
+              </div>
+              <div className="ml-4">
+                <p className="text-xl font-bold bg-gradient-to-r from-cyan-400 to-blue-500 bg-clip-text text-transparent">
+                  WOLF PLATFORM
+                </p>
+                <p className="text-xs text-gold tracking-wider">ENTERPRISE EDITION</p>
+              </div>
+            </div>
+
+            <div className="text-center md:text-right">
+              <p className="text-sm text-slate-400 mb-1">🐺 Wolf Platform v2.0.0 ENTERPRISE EDITION</p>
+              <p className="text-xs text-slate-500">
+                Enterprise AI Management Platform • Ready for Launch • {new Date().getFullYear()}
+              </p>
+            </div>
+          </div>
         </div>
       </footer>
     </div>
