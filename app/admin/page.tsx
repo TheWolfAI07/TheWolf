@@ -368,24 +368,6 @@ export default function AdminPanel() {
             <TabsTrigger value="activity" className="data-[state=active]:bg-turquoise data-[state=active]:text-black">
               Activity Logs
             </TabsTrigger>
-            <TabsTrigger
-              value="subscriptions"
-              className="data-[state=active]:bg-turquoise data-[state=active]:text-black"
-            >
-              Subscriptions
-            </TabsTrigger>
-            <TabsTrigger
-              value="adminControls"
-              className="data-[state=active]:bg-turquoise data-[state=active]:text-black"
-            >
-              Admin Controls
-            </TabsTrigger>
-            <TabsTrigger
-              value="frontendAdmins"
-              className="data-[state=active]:bg-turquoise data-[state=active]:text-black"
-            >
-              Frontend Admins
-            </TabsTrigger>
             {adminRole === "super_admin" && (
               <TabsTrigger value="settings" className="data-[state=active]:bg-turquoise data-[state=active]:text-black">
                 System Settings
@@ -595,58 +577,6 @@ export default function AdminPanel() {
                       )}
                     </TableBody>
                   </Table>
-                </div>
-              </CardContent>
-            </Card>
-          </TabsContent>
-
-          <TabsContent value="subscriptions" className="space-y-4">
-            <Card className="bg-black/40 border-slate-700 backdrop-blur-sm">
-              <CardHeader>
-                <CardTitle className="text-white">Subscription Management</CardTitle>
-                <CardDescription className="text-slate-400">Manage user subscriptions and plans</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div>
-                  {/* Subscription Management Content */}
-                  <p className="text-slate-300">
-                    View all user subscriptions, manage subscription plans, billing overview, and subscription
-                    analytics.
-                  </p>
-                </div>
-              </CardContent>
-            </Card>
-          </TabsContent>
-
-          <TabsContent value="adminControls" className="space-y-4">
-            <Card className="bg-black/40 border-slate-700 backdrop-blur-sm">
-              <CardHeader>
-                <CardTitle className="text-white">Admin Controls</CardTitle>
-                <CardDescription className="text-slate-400">Comprehensive admin controls</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div>
-                  {/* Admin Controls Content */}
-                  <p className="text-slate-300">
-                    User management, system settings, content management, and platform configuration.
-                  </p>
-                </div>
-              </CardContent>
-            </Card>
-          </TabsContent>
-
-          <TabsContent value="frontendAdmins" className="space-y-4">
-            <Card className="bg-black/40 border-slate-700 backdrop-blur-sm">
-              <CardHeader>
-                <CardTitle className="text-white">Frontend Admin Management</CardTitle>
-                <CardDescription className="text-slate-400">Manage frontend admins and permissions</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div>
-                  {/* Frontend Admin Management Content */}
-                  <p className="text-slate-300">
-                    Add/remove frontend admins, UI control permissions, and frontend admin roles.
-                  </p>
                 </div>
               </CardContent>
             </Card>
