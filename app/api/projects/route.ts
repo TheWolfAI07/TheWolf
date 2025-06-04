@@ -1,34 +1,25 @@
 import { NextResponse } from "next/server"
-import { createServerSupabaseClient } from "@/lib/supabase"
+import { createSafeSupabaseClient } from "@/lib/supabase"
 import { logger } from "@/lib/logger"
 
 export async function GET(request: Request) {
   try {
     const { searchParams } = new URL(request.url)
-    const page = Number.parseInt(searchParams.get("page") || "1")
-    const limit = Number.parseInt(searchParams.get("limit") || "10")
     const status = searchParams.get("status")
-    const search = searchParams.get("search") || ""
-    const sortBy = searchParams.get("sortBy") || "created_at"
-    const sortOrder = searchParams.get("sortOrder") || "desc"
     const priority = searchParams.get("priority")
+    const limit = Number.parseInt(searchParams.get("limit") || "50")
 
-    logger.info("Projects API GET request", {
-      page,
-      limit,
-      status,
-      search,
-      sortBy,
-      sortOrder,
-      priority,
-    })
+    logger.info("Projects API GET request", { status, priority, limit })
 
-    const supabase = createServerSupabaseClient()
+    const supabase = createSafeSupabaseClient()
 
-    // Build query
-    let query = supabase.from("wolf_projects").select("*", { count: "exact" })
+    if (!supabase) {
+      throw new Error("Failed to initialize Supabase client")
+    }
 
-    // Apply filters
+    // Build query with filters
+    let query = supabase.from("wolf_projects").select("*").order("created_at", { ascending: false }).limit(limit)
+
     if (status) {
       query = query.eq("status", status)
     }
@@ -37,61 +28,39 @@ export async function GET(request: Request) {
       query = query.eq("priority", priority)
     }
 
-    if (search) {
-      query = query.or(`name.ilike.%${search}%,description.ilike.%${search}%`)
-    }
-
-    // Apply sorting
-    query = query.order(sortBy, { ascending: sortOrder === "asc" })
-
-    // Apply pagination
-    const from = (page - 1) * limit
-    const to = from + limit - 1
-    query = query.range(from, to)
-
-    const { data: projects, error, count } = await query
+    const { data: projects, error } = await query
 
     if (error) {
       logger.error("Failed to fetch projects", { error: error.message })
       throw error
     }
 
-    // Calculate real stats
-    const { data: allProjects, error: statsError } = await supabase
-      .from("wolf_projects")
-      .select("status, priority, progress")
-
-    if (statsError) {
-      logger.error("Failed to fetch project stats", { error: statsError.message })
-    }
-
+    // Calculate project statistics
     const stats = {
-      total: count || 0,
-      active: allProjects?.filter((p) => p.status === "active").length || 0,
-      completed: allProjects?.filter((p) => p.status === "completed").length || 0,
-      high_priority: allProjects?.filter((p) => p.priority === "high").length || 0,
-      avg_progress:
-        allProjects?.length > 0
-          ? Math.round(allProjects.reduce((sum, p) => sum + (p.progress || 0), 0) / allProjects.length)
+      total: projects?.length || 0,
+      active: projects?.filter((p) => p.status === "active").length || 0,
+      completed: projects?.filter((p) => p.status === "completed").length || 0,
+      inactive: projects?.filter((p) => p.status === "inactive").length || 0,
+      archived: projects?.filter((p) => p.status === "archived").length || 0,
+      avgProgress:
+        projects?.length > 0
+          ? Math.round(projects.reduce((sum, p) => sum + (p.progress || 0), 0) / projects.length)
           : 0,
     }
 
-    logger.info("Real projects fetched successfully", {
+    logger.info("Projects data retrieved successfully", {
       count: projects?.length || 0,
-      total: count || 0,
+      stats,
     })
 
     return NextResponse.json({
       success: true,
-      data: projects || [],
-      pagination: {
-        page,
-        limit,
-        total: count || 0,
-        totalPages: Math.ceil((count || 0) / limit),
+      data: {
+        projects: projects || [],
+        stats,
+        timestamp: new Date().toISOString(),
       },
-      stats,
-      message: `Retrieved ${projects?.length || 0} real projects`,
+      message: "Projects retrieved successfully",
     })
   } catch (error: any) {
     logger.error("Projects API error", {
@@ -118,18 +87,15 @@ export async function POST(request: Request) {
       description,
       status = "active",
       priority = "medium",
+      progress = 0,
       start_date,
       end_date,
       budget,
       tags = [],
-      progress = 0,
+      metadata = {},
     } = body
 
-    logger.info("Projects API POST request", {
-      name,
-      status,
-      priority,
-    })
+    logger.info("Projects API POST request", { name, status, priority })
 
     if (!name) {
       return NextResponse.json(
@@ -141,9 +107,13 @@ export async function POST(request: Request) {
       )
     }
 
-    const supabase = createServerSupabaseClient()
+    const supabase = createSafeSupabaseClient()
 
-    // Insert real project
+    if (!supabase) {
+      throw new Error("Failed to initialize Supabase client")
+    }
+
+    // Create new project
     const { data: project, error } = await supabase
       .from("wolf_projects")
       .insert([
@@ -152,12 +122,12 @@ export async function POST(request: Request) {
           description,
           status,
           priority,
-          progress,
+          progress: Math.max(0, Math.min(100, progress)), // Ensure progress is between 0-100
           start_date,
           end_date,
           budget: budget ? Number.parseFloat(budget) : null,
           tags,
-          metadata: {},
+          metadata,
         },
       ])
       .select()
@@ -168,19 +138,23 @@ export async function POST(request: Request) {
       throw error
     }
 
-    // Log activity
+    // Log project creation activity
     await supabase.from("wolf_activities").insert([
       {
-        action: "create_project",
+        action: "project_created",
         resource_type: "project",
         resource_id: project.id,
-        details: { project_name: name, status, priority },
+        details: {
+          project_name: name,
+          status,
+          priority,
+        },
       },
     ])
 
-    logger.info("Real project created successfully", {
+    logger.info("Project created successfully", {
       id: project.id,
-      name: project.name,
+      name,
     })
 
     return NextResponse.json({
@@ -208,12 +182,9 @@ export async function POST(request: Request) {
 export async function PUT(request: Request) {
   try {
     const body = await request.json()
-    const { id, ...updateData } = body
+    const { id, ...updates } = body
 
-    logger.info("Projects API PUT request", {
-      id,
-      updateFields: Object.keys(updateData),
-    })
+    logger.info("Projects API PUT request", { id, updates: Object.keys(updates) })
 
     if (!id) {
       return NextResponse.json(
@@ -225,14 +196,22 @@ export async function PUT(request: Request) {
       )
     }
 
-    const supabase = createServerSupabaseClient()
+    const supabase = createSafeSupabaseClient()
 
-    // Update real project
+    if (!supabase) {
+      throw new Error("Failed to initialize Supabase client")
+    }
+
+    // Validate progress if provided
+    if (updates.progress !== undefined) {
+      updates.progress = Math.max(0, Math.min(100, updates.progress))
+    }
+
+    // Update project
     const { data: project, error } = await supabase
       .from("wolf_projects")
       .update({
-        ...updateData,
-        budget: updateData.budget ? Number.parseFloat(updateData.budget) : updateData.budget,
+        ...updates,
         updated_at: new Date().toISOString(),
       })
       .eq("id", id)
@@ -240,21 +219,24 @@ export async function PUT(request: Request) {
       .single()
 
     if (error) {
-      logger.error("Failed to update project", { error: error.message })
+      logger.error("Failed to update project", { error: error.message, id })
       throw error
     }
 
-    // Log activity
+    // Log project update activity
     await supabase.from("wolf_activities").insert([
       {
-        action: "update_project",
+        action: "project_updated",
         resource_type: "project",
         resource_id: id,
-        details: { updated_fields: Object.keys(updateData) },
+        details: {
+          project_name: project.name,
+          updates: Object.keys(updates),
+        },
       },
     ])
 
-    logger.info("Real project updated successfully", { id })
+    logger.info("Project updated successfully", { id, name: project.name })
 
     return NextResponse.json({
       success: true,
@@ -295,27 +277,45 @@ export async function DELETE(request: Request) {
       )
     }
 
-    const supabase = createServerSupabaseClient()
+    const supabase = createSafeSupabaseClient()
 
-    // Delete real project
+    if (!supabase) {
+      throw new Error("Failed to initialize Supabase client")
+    }
+
+    // Get project details before deletion
+    const { data: project, error: fetchError } = await supabase
+      .from("wolf_projects")
+      .select("name")
+      .eq("id", id)
+      .single()
+
+    if (fetchError) {
+      logger.error("Failed to fetch project for deletion", { error: fetchError.message, id })
+      throw fetchError
+    }
+
+    // Delete project
     const { error } = await supabase.from("wolf_projects").delete().eq("id", id)
 
     if (error) {
-      logger.error("Failed to delete project", { error: error.message })
+      logger.error("Failed to delete project", { error: error.message, id })
       throw error
     }
 
-    // Log activity
+    // Log project deletion activity
     await supabase.from("wolf_activities").insert([
       {
-        action: "delete_project",
+        action: "project_deleted",
         resource_type: "project",
         resource_id: id,
-        details: { deleted: true },
+        details: {
+          project_name: project.name,
+        },
       },
     ])
 
-    logger.info("Real project deleted successfully", { id })
+    logger.info("Project deleted successfully", { id, name: project.name })
 
     return NextResponse.json({
       success: true,

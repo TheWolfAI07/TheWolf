@@ -7,19 +7,8 @@ import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
 import { Progress } from "@/components/ui/progress"
 import { LineChart, Line, CartesianGrid, XAxis, YAxis, Tooltip, ResponsiveContainer } from "recharts"
-import { Target, TrendingUp, Plus, Calendar, DollarSign, CheckCircle, Clock } from "lucide-react"
+import { Target, TrendingUp, Plus, Calendar, DollarSign, CheckCircle, Clock, Crown, Zap } from "lucide-react"
 import { Navbar } from "@/components/navbar"
-
-// Helper function to format relative time
-function formatDistanceToNow(date: Date): string {
-  const now = new Date()
-  const diffInSeconds = Math.floor((now.getTime() - date.getTime()) / 1000)
-
-  if (diffInSeconds < 60) return `${diffInSeconds} seconds ago`
-  if (diffInSeconds < 3600) return `${Math.floor(diffInSeconds / 60)} minutes ago`
-  if (diffInSeconds < 86400) return `${Math.floor(diffInSeconds / 3600)} hours ago`
-  return `${Math.floor(diffInSeconds / 86400)} days ago`
-}
 
 interface Goal {
   id: string
@@ -28,8 +17,10 @@ interface Goal {
   current: number
   unit: string
   deadline: string
-  category: "profit" | "growth" | "development" | "other"
+  category: "crypto" | "business" | "personal" | "financial"
+  priority: "low" | "medium" | "high" | "critical"
   history: { date: string; value: number }[]
+  description?: string
 }
 
 export default function GoalsPage() {
@@ -40,7 +31,9 @@ export default function GoalsPage() {
     current: 0,
     unit: "$",
     deadline: "",
-    category: "profit",
+    category: "crypto",
+    priority: "medium",
+    description: "",
   })
   const [loading, setLoading] = useState(true)
   const [activeCategory, setActiveCategory] = useState<string | null>(null)
@@ -52,70 +45,114 @@ export default function GoalsPage() {
   const loadGoals = () => {
     setLoading(true)
 
-    // Simulate loading goals from API
+    // Initialize with realistic Wolf Platform goals
     setTimeout(() => {
-      const sampleGoals: Goal[] = [
+      const wolfGoals: Goal[] = [
         {
-          id: "1",
-          title: "Q3 Revenue Target",
+          id: "crypto-portfolio",
+          title: "Crypto Portfolio Target",
+          target: 100000,
+          current: 25000,
+          unit: "$",
+          deadline: "2024-12-31",
+          category: "crypto",
+          priority: "high",
+          description: "Build a diversified crypto portfolio focusing on BTC, ETH, and high-potential altcoins",
+          history: [
+            { date: "2024-01-01", value: 5000 },
+            { date: "2024-02-01", value: 12000 },
+            { date: "2024-03-01", value: 18000 },
+            { date: "2024-04-01", value: 25000 },
+          ],
+        },
+        {
+          id: "btc-accumulation",
+          title: "Bitcoin Accumulation",
+          target: 1,
+          current: 0.35,
+          unit: "BTC",
+          deadline: "2024-08-31",
+          category: "crypto",
+          priority: "critical",
+          description: "Accumulate 1 full Bitcoin through DCA strategy during market dips",
+          history: [
+            { date: "2024-01-01", value: 0.1 },
+            { date: "2024-02-01", value: 0.2 },
+            { date: "2024-03-01", value: 0.28 },
+            { date: "2024-04-01", value: 0.35 },
+          ],
+        },
+        {
+          id: "business-revenue",
+          title: "Monthly Business Revenue",
           target: 50000,
-          current: 32500,
+          current: 15000,
+          unit: "$",
+          deadline: "2024-06-30",
+          category: "business",
+          priority: "high",
+          description: "Scale Wolf Platform to $50k monthly recurring revenue through early adopters",
+          history: [
+            { date: "2024-01-01", value: 2000 },
+            { date: "2024-02-01", value: 6000 },
+            { date: "2024-03-01", value: 10000 },
+            { date: "2024-04-01", value: 15000 },
+          ],
+        },
+        {
+          id: "emergency-fund",
+          title: "Emergency Fund",
+          target: 50000,
+          current: 18000,
           unit: "$",
           deadline: "2024-09-30",
-          category: "profit",
+          category: "financial",
+          priority: "medium",
+          description: "Build 6-month emergency fund for financial security and peace of mind",
           history: [
-            { date: "2024-07-01", value: 10000 },
-            { date: "2024-07-15", value: 18500 },
-            { date: "2024-08-01", value: 25000 },
-            { date: "2024-08-15", value: 32500 },
+            { date: "2024-01-01", value: 8000 },
+            { date: "2024-02-01", value: 12000 },
+            { date: "2024-03-01", value: 15000 },
+            { date: "2024-04-01", value: 18000 },
           ],
         },
         {
-          id: "2",
-          title: "User Growth",
+          id: "platform-users",
+          title: "Wolf Platform Users",
           target: 10000,
-          current: 7500,
+          current: 250,
           unit: "users",
           deadline: "2024-12-31",
-          category: "growth",
+          category: "business",
+          priority: "high",
+          description: "Grow Wolf Platform to 10,000 active users through word-of-mouth and value delivery",
           history: [
-            { date: "2024-06-01", value: 2000 },
-            { date: "2024-07-01", value: 4500 },
-            { date: "2024-08-01", value: 7500 },
+            { date: "2024-01-01", value: 10 },
+            { date: "2024-02-01", value: 50 },
+            { date: "2024-03-01", value: 150 },
+            { date: "2024-04-01", value: 250 },
           ],
         },
         {
-          id: "3",
-          title: "Launch Mobile App",
-          target: 100,
-          current: 65,
-          unit: "%",
-          deadline: "2024-10-15",
-          category: "development",
+          id: "fitness-goal",
+          title: "Fitness Milestone",
+          target: 180,
+          current: 165,
+          unit: "lbs",
+          deadline: "2024-07-31",
+          category: "personal",
+          priority: "medium",
+          description: "Reach target weight through consistent training and nutrition",
           history: [
-            { date: "2024-06-15", value: 20 },
-            { date: "2024-07-01", value: 35 },
-            { date: "2024-07-15", value: 50 },
-            { date: "2024-08-01", value: 65 },
-          ],
-        },
-        {
-          id: "4",
-          title: "Optimize Tax Structure",
-          target: 100,
-          current: 40,
-          unit: "%",
-          deadline: "2024-11-30",
-          category: "other",
-          history: [
-            { date: "2024-07-01", value: 10 },
-            { date: "2024-07-15", value: 25 },
-            { date: "2024-08-01", value: 40 },
+            { date: "2024-01-01", value: 175 },
+            { date: "2024-02-01", value: 172 },
+            { date: "2024-03-01", value: 168 },
+            { date: "2024-04-01", value: 165 },
           ],
         },
       ]
 
-      setGoals(sampleGoals)
+      setGoals(wolfGoals)
       setLoading(false)
     }, 1000)
   }
@@ -130,7 +167,9 @@ export default function GoalsPage() {
       current: newGoal.current,
       unit: newGoal.unit,
       deadline: newGoal.deadline,
-      category: newGoal.category as "profit" | "growth" | "development" | "other",
+      category: newGoal.category as Goal["category"],
+      priority: newGoal.priority as Goal["priority"],
+      description: newGoal.description,
       history: [{ date: new Date().toISOString().split("T")[0], value: newGoal.current }],
     }
 
@@ -141,7 +180,9 @@ export default function GoalsPage() {
       current: 0,
       unit: "$",
       deadline: "",
-      category: "profit",
+      category: "crypto",
+      priority: "medium",
+      description: "",
     })
   }
 
@@ -163,36 +204,56 @@ export default function GoalsPage() {
 
   const getCategoryColor = (category: string) => {
     switch (category) {
-      case "profit":
+      case "crypto":
+        return "text-gold"
+      case "business":
+        return "text-teal"
+      case "financial":
         return "text-green-400"
-      case "growth":
-        return "text-blue-400"
-      case "development":
+      case "personal":
         return "text-purple-400"
       default:
-        return "text-yellow-400"
+        return "text-slate-400"
     }
   }
 
   const getCategoryIcon = (category: string) => {
     switch (category) {
-      case "profit":
-        return <DollarSign className="w-4 h-4" />
-      case "growth":
+      case "crypto":
+        return <Crown className="w-4 h-4" />
+      case "business":
         return <TrendingUp className="w-4 h-4" />
-      case "development":
-        return <CheckCircle className="w-4 h-4" />
-      default:
+      case "financial":
+        return <DollarSign className="w-4 h-4" />
+      case "personal":
         return <Target className="w-4 h-4" />
+      default:
+        return <CheckCircle className="w-4 h-4" />
     }
   }
 
   const getProgressColor = (current: number, target: number) => {
     const percentage = (current / target) * 100
     if (percentage >= 90) return "bg-green-500"
-    if (percentage >= 60) return "bg-blue-500"
-    if (percentage >= 30) return "bg-yellow-500"
+    if (percentage >= 70) return "bg-teal"
+    if (percentage >= 50) return "bg-gold"
+    if (percentage >= 30) return "bg-orange-500"
     return "bg-red-500"
+  }
+
+  const getPriorityColor = (priority: string) => {
+    switch (priority) {
+      case "critical":
+        return "bg-red-500/20 text-red-300 border-red-400/50"
+      case "high":
+        return "bg-orange-500/20 text-orange-300 border-orange-400/50"
+      case "medium":
+        return "bg-yellow-500/20 text-yellow-300 border-yellow-400/50"
+      case "low":
+        return "bg-green-500/20 text-green-300 border-green-400/50"
+      default:
+        return "bg-slate-500/20 text-slate-300 border-slate-400/50"
+    }
   }
 
   const getDaysRemaining = (deadline: string) => {
@@ -208,21 +269,31 @@ export default function GoalsPage() {
   })
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-black via-slate-900 to-slate-800">
+    <div className="min-h-screen bg-wolf-gradient">
       <Navbar />
 
       <div className="container mx-auto px-4 pt-24 pb-8">
-        <div className="flex items-center justify-between mb-6">
-          <h1 className="text-3xl font-bold text-turquoise flex items-center">
-            <Target className="mr-2" /> Profit Goals
-          </h1>
+        <div className="flex items-center justify-between mb-8">
+          <div className="flex items-center gap-4">
+            <div className="w-12 h-12 bg-gradient-to-br from-teal to-dark-teal rounded-xl flex items-center justify-center wolf-shadow">
+              <Target className="h-6 w-6 text-white" />
+            </div>
+            <div>
+              <h1 className="text-4xl font-bold text-wolf-heading metallic-shine">Wolf Targets & Goals</h1>
+              <p className="text-slate-400">Track your crypto, business, and personal objectives</p>
+            </div>
+          </div>
+          <Badge className="badge-wolf-gold px-4 py-2">
+            <Zap className="h-4 w-4 mr-2" />
+            {filteredGoals.length} Active Goals
+          </Badge>
         </div>
 
         {/* New Goal Form */}
-        <Card className="bg-black/40 border-slate-700 backdrop-blur-sm mb-6">
+        <Card className="bg-wolf-card wolf-border wolf-shadow-lg mb-8">
           <CardHeader>
-            <CardTitle className="text-white">Set New Goal</CardTitle>
-            <CardDescription>Define clear targets to drive your success</CardDescription>
+            <CardTitle className="text-wolf-heading">Create New Wolf Target</CardTitle>
+            <CardDescription>Set ambitious goals and track your progress like a silent assassin</CardDescription>
           </CardHeader>
           <CardContent>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -269,92 +340,117 @@ export default function GoalsPage() {
                 className="bg-slate-800 border border-slate-700 text-white rounded-md p-2"
               >
                 <option value="$">$ (Dollars)</option>
-                <option value="€">€ (Euros)</option>
+                <option value="BTC">BTC (Bitcoin)</option>
+                <option value="ETH">ETH (Ethereum)</option>
                 <option value="users">Users</option>
                 <option value="%">% (Percent)</option>
+                <option value="lbs">lbs (Pounds)</option>
+                <option value="kg">kg (Kilograms)</option>
               </select>
               <select
                 value={newGoal.category}
                 onChange={(e) => setNewGoal({ ...newGoal, category: e.target.value })}
                 className="bg-slate-800 border border-slate-700 text-white rounded-md p-2"
               >
-                <option value="profit">Profit</option>
-                <option value="growth">Growth</option>
-                <option value="development">Development</option>
-                <option value="other">Other</option>
+                <option value="crypto">Crypto</option>
+                <option value="business">Business</option>
+                <option value="financial">Financial</option>
+                <option value="personal">Personal</option>
+              </select>
+              <select
+                value={newGoal.priority}
+                onChange={(e) => setNewGoal({ ...newGoal, priority: e.target.value })}
+                className="bg-slate-800 border border-slate-700 text-white rounded-md p-2"
+              >
+                <option value="low">Low Priority</option>
+                <option value="medium">Medium Priority</option>
+                <option value="high">High Priority</option>
+                <option value="critical">Critical Priority</option>
               </select>
             </div>
-            <Button
-              onClick={addGoal}
-              className="bg-turquoise text-black hover:bg-pink transition-colors mt-4"
-              disabled={!newGoal.title.trim() || newGoal.target <= 0}
-            >
+            <Input
+              placeholder="Description (optional)"
+              value={newGoal.description}
+              onChange={(e) => setNewGoal({ ...newGoal, description: e.target.value })}
+              className="bg-slate-800 border-slate-700 text-white mt-4"
+            />
+            <Button onClick={addGoal} className="btn-wolf mt-4" disabled={!newGoal.title.trim() || newGoal.target <= 0}>
               <Plus className="w-4 h-4 mr-2" />
-              Add Goal
+              Add Wolf Target
             </Button>
           </CardContent>
         </Card>
 
         {/* Goals Filter */}
-        <div className="flex items-center justify-between mb-4">
+        <div className="flex items-center justify-between mb-6">
           <div className="flex gap-2">
             <Badge
               onClick={() => setActiveCategory(null)}
-              className={`cursor-pointer ${activeCategory === null ? "bg-turquoise text-black" : "bg-slate-700"}`}
+              className={`cursor-pointer ${activeCategory === null ? "badge-wolf" : "bg-slate-700 hover:bg-slate-600"}`}
             >
               All
             </Badge>
             <Badge
-              onClick={() => setActiveCategory("profit")}
-              className={`cursor-pointer ${activeCategory === "profit" ? "bg-green-500" : "bg-slate-700 hover:bg-green-500/30"}`}
+              onClick={() => setActiveCategory("crypto")}
+              className={`cursor-pointer ${activeCategory === "crypto" ? "badge-wolf-gold" : "bg-slate-700 hover:bg-slate-600"}`}
             >
-              <DollarSign className="w-3 h-3 mr-1" />
-              Profit
+              <Crown className="w-3 h-3 mr-1" />
+              Crypto
             </Badge>
             <Badge
-              onClick={() => setActiveCategory("growth")}
-              className={`cursor-pointer ${activeCategory === "growth" ? "bg-blue-500" : "bg-slate-700 hover:bg-blue-500/30"}`}
+              onClick={() => setActiveCategory("business")}
+              className={`cursor-pointer ${activeCategory === "business" ? "badge-wolf" : "bg-slate-700 hover:bg-slate-600"}`}
             >
               <TrendingUp className="w-3 h-3 mr-1" />
-              Growth
+              Business
             </Badge>
             <Badge
-              onClick={() => setActiveCategory("development")}
-              className={`cursor-pointer ${activeCategory === "development" ? "bg-purple-500" : "bg-slate-700 hover:bg-purple-500/30"}`}
+              onClick={() => setActiveCategory("financial")}
+              className={`cursor-pointer ${activeCategory === "financial" ? "bg-green-500/20 text-green-300" : "bg-slate-700 hover:bg-slate-600"}`}
             >
-              <CheckCircle className="w-3 h-3 mr-1" />
-              Development
+              <DollarSign className="w-3 h-3 mr-1" />
+              Financial
+            </Badge>
+            <Badge
+              onClick={() => setActiveCategory("personal")}
+              className={`cursor-pointer ${activeCategory === "personal" ? "bg-purple-500/20 text-purple-300" : "bg-slate-700 hover:bg-slate-600"}`}
+            >
+              <Target className="w-3 h-3 mr-1" />
+              Personal
             </Badge>
           </div>
-          <Badge>{filteredGoals.length} goals</Badge>
         </div>
 
         {/* Goals List */}
         {loading ? (
           <div className="flex justify-center py-8">
-            <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-cyan-500"></div>
+            <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-teal"></div>
           </div>
         ) : filteredGoals.length > 0 ? (
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             {filteredGoals.map((goal) => (
-              <Card key={goal.id} className="bg-black/40 border-slate-700 backdrop-blur-sm">
+              <Card key={goal.id} className="bg-wolf-card wolf-border wolf-shadow">
                 <CardHeader className="pb-2">
                   <div className="flex justify-between items-start">
-                    <CardTitle className="text-white flex items-center">
-                      <span className={`mr-2 ${getCategoryColor(goal.category)}`}>
-                        {getCategoryIcon(goal.category)}
-                      </span>
-                      {goal.title}
-                    </CardTitle>
-                    <Badge className="bg-slate-600">
-                      <Calendar className="w-3 h-3 mr-1" />
-                      {goal.deadline}
-                    </Badge>
+                    <div className="flex-1">
+                      <CardTitle className="text-wolf-heading flex items-center gap-2">
+                        <span className={getCategoryColor(goal.category)}>{getCategoryIcon(goal.category)}</span>
+                        {goal.title}
+                      </CardTitle>
+                      {goal.description && <CardDescription className="mt-2">{goal.description}</CardDescription>}
+                    </div>
+                    <div className="flex flex-col gap-2">
+                      <Badge className={getPriorityColor(goal.priority)}>{goal.priority}</Badge>
+                      <Badge className="bg-slate-600 text-slate-300">
+                        <Calendar className="w-3 h-3 mr-1" />
+                        {goal.deadline}
+                      </Badge>
+                    </div>
                   </div>
                 </CardHeader>
                 <CardContent>
                   <div className="mb-4">
-                    <div className="flex justify-between mb-1">
+                    <div className="flex justify-between mb-2">
                       <span className="text-slate-300">
                         {goal.current} / {goal.target} {goal.unit}
                       </span>
@@ -362,7 +458,7 @@ export default function GoalsPage() {
                     </div>
                     <Progress
                       value={(goal.current / goal.target) * 100}
-                      className="h-2"
+                      className="h-3"
                       indicatorClassName={getProgressColor(goal.current, goal.target)}
                     />
                   </div>
@@ -405,7 +501,7 @@ export default function GoalsPage() {
                       <Button
                         variant="outline"
                         size="sm"
-                        className="border-cyan-500 text-cyan-400 hover:bg-cyan-500/20"
+                        className="border-teal text-teal hover:bg-teal/20"
                         onClick={() => updateGoalProgress(goal.id, goal.current + goal.target * 0.1)}
                       >
                         Update Progress
@@ -417,10 +513,10 @@ export default function GoalsPage() {
             ))}
           </div>
         ) : (
-          <div className="text-center py-12 bg-black/40 rounded-lg border border-slate-700">
+          <div className="text-center py-12 bg-wolf-card rounded-lg wolf-border">
             <Target className="mx-auto h-12 w-12 text-slate-500 mb-3" />
             <h3 className="text-xl font-medium text-slate-300 mb-1">No goals found</h3>
-            <p className="text-slate-400">Set your first goal to start tracking your progress.</p>
+            <p className="text-slate-400">Set your first Wolf target to start tracking your progress.</p>
           </div>
         )}
       </div>

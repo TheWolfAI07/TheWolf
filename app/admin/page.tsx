@@ -78,7 +78,7 @@ export default function AdminPanel() {
     if (isAdmin) {
       loadData()
     }
-  }, [isAdmin, adminLoading])
+  }, [isAdmin, adminLoading, toast])
 
   const loadData = async () => {
     setLoading(true)
@@ -91,41 +91,30 @@ export default function AdminPanel() {
       ])
 
       if (usersResult.error) {
+        console.error("Users error:", usersResult.error)
         toast({
           title: "Error",
           description: usersResult.error,
           variant: "destructive",
         })
       } else {
-        setUsers(usersResult.users)
+        setUsers(usersResult.users || [])
       }
 
       if (logsResult.error) {
-        toast({
-          title: "Error",
-          description: logsResult.error,
-          variant: "destructive",
-        })
+        console.error("Logs error:", logsResult.error)
       } else {
-        setActivityLogs(logsResult.logs)
+        setActivityLogs(logsResult.logs || [])
       }
 
       if (settingsResult.error) {
-        toast({
-          title: "Error",
-          description: settingsResult.error,
-          variant: "destructive",
-        })
+        console.error("Settings error:", settingsResult.error)
       } else {
-        setSystemSettings(settingsResult.settings)
+        setSystemSettings(settingsResult.settings || [])
       }
 
       if (analyticsResult.error) {
-        toast({
-          title: "Error",
-          description: analyticsResult.error,
-          variant: "destructive",
-        })
+        console.error("Analytics error:", analyticsResult.error)
       } else {
         setAnalytics(analyticsResult)
       }

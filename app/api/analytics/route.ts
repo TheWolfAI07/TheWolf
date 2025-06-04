@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server"
-import { createServerSupabaseClient } from "@/lib/supabase"
+import { createSafeSupabaseClient } from "@/lib/supabase"
 import { logger } from "@/lib/logger"
 
 export async function GET(request: Request) {
@@ -10,9 +10,13 @@ export async function GET(request: Request) {
 
     logger.info("Analytics API GET request", { timeframe, category })
 
-    const supabase = createServerSupabaseClient()
+    const supabase = createSafeSupabaseClient()
 
-    // Get real analytics data from database
+    if (!supabase) {
+      throw new Error("Failed to initialize Supabase client")
+    }
+
+    // Get real analytics data from database with correct column names
     const { data: analyticsData, error: analyticsError } = await supabase
       .from("wolf_analytics")
       .select("*")
@@ -21,15 +25,35 @@ export async function GET(request: Request) {
 
     if (analyticsError) {
       logger.error("Failed to fetch analytics", { error: analyticsError.message })
+      // If table doesn't exist, return empty data instead of failing
+      if (analyticsError.message.includes("does not exist")) {
+        logger.warn("Analytics table does not exist, returning empty data")
+        return NextResponse.json({
+          success: true,
+          data: {
+            totalProjects: 0,
+            activeProjects: 0,
+            completedProjects: 0,
+            avgProgress: 0,
+            recentActivities: 0,
+            systemUptime: calculateUptime(),
+            timeframe,
+            metrics: [],
+            timestamp: new Date().toISOString(),
+          },
+          message: "Analytics table not found - please run database setup",
+        })
+      }
       throw analyticsError
     }
 
     // Get real project data
-    const { data: projectsData, error: projectsError } = await supabase.from("wolf_projects").select("*")
+    const { data: projectsData, error: projectsError } = await supabase
+      .from("wolf_projects")
+      .select("*")
 
     if (projectsError) {
       logger.error("Failed to fetch projects", { error: projectsError.message })
-      throw projectsError
     }
 
     // Calculate real metrics
@@ -113,9 +137,13 @@ export async function POST(request: Request) {
       )
     }
 
-    const supabase = createServerSupabaseClient()
+    const supabase = createSafeSupabaseClient()
 
-    // Insert real analytics entry
+    if (!supabase) {
+      throw new Error("Failed to initialize Supabase client")
+    }
+
+    // Insert real analytics entry with correct column names
     const { data, error } = await supabase
       .from("wolf_analytics")
       .insert([
@@ -127,6 +155,7 @@ export async function POST(request: Request) {
           subcategory,
           dimensions,
           timestamp: new Date().toISOString(),
+          created_at: new Date().toISOString(),
         },
       ])
       .select()

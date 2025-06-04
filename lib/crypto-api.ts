@@ -110,7 +110,7 @@ export class CryptoAPI {
         signal: controller.signal,
         headers: {
           Accept: "application/json",
-          "User-Agent": "CryptoDashboard/1.0",
+          "User-Agent": "WolfPlatform/1.0",
         },
       })
 
@@ -121,12 +121,11 @@ export class CryptoAPI {
         if (response.status === 429) {
           const retryAfter = response.headers.get("retry-after")
           const waitTime = retryAfter ? Number.parseInt(retryAfter) * 1000 : 60000
-          console.warn(`Rate limited. Retrying after ${waitTime}ms`)
 
           // Return cached data if available
           const cached = this.cache.get(cacheKey)
           if (cached) {
-            console.warn(`Using expired cache for ${url}`)
+            console.warn(`Using cached data for ${url}`)
             return cached.data
           }
 
