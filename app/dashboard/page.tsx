@@ -1,235 +1,307 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
-import { Input } from "@/components/ui/input"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Activity, Users, TrendingUp, Plus, Search, Filter, FolderOpen } from "lucide-react"
-
-interface User {
-  id: string
-  username: string
-  status: string
-}
-
-interface Project {
-  id: number
-  name: string
-  description: string
-  status: string
-  created_at: string
-  updated_at: string
-  owner_id: string | null
-}
-
-interface Analytics {
-  totalusers?: number
-  activesessions?: number
-  growthrate?: number
-  revenue?: number
-}
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { BarChart3, Activity, TrendingUp, Crown, Zap, CheckCircle, AlertCircle, RefreshCw, Rocket } from "lucide-react"
+import { Navbar } from "@/components/navbar"
+import CustomizableLayout from "@/components/customizable-layout"
+import AdvancedProjectManager from "@/components/advanced-project-manager"
+import CollaborativeDashboard from "@/components/collaborative-dashboard"
+import AIDashboard from "@/components/ai-dashboard"
+import { apiClient } from "@/lib/api-client"
+import { logger } from "@/lib/logger"
 
 export default function DashboardPage() {
-  const [users, setUsers] = useState<User[]>([])
-  const [projects, setProjects] = useState<Project[]>([])
-  const [analytics, setAnalytics] = useState<Analytics | null>(null)
+  const [activeTab, setActiveTab] = useState("overview")
+  const [realData, setRealData] = useState<any>({})
   const [loading, setLoading] = useState(true)
-  const [searchTerm, setSearchTerm] = useState("")
-  const [statusFilter, setStatusFilter] = useState("all")
+  const [error, setError] = useState<string | null>(null)
 
-  useEffect(() => {
-    fetchData()
-  }, [])
-
-  const fetchData = async () => {
+  // Load real data from all APIs
+  const loadRealDashboardData = async () => {
     try {
-      const [usersResponse, projectsResponse, analyticsResponse] = await Promise.all([
-        fetch("/api/users"),
-        fetch("/api/projects"),
-        fetch("/api/analytics?type=overview"),
+      setLoading(true)
+      logger.info("Loading real dashboard data")
+
+      const [analyticsResponse, projectsResponse, statusResponse] = await Promise.all([
+        apiClient.get("/api/analytics"),
+        apiClient.get("/api/projects"),
+        apiClient.get("/api/status"),
       ])
 
-      const usersData = await usersResponse.json()
-      const projectsData = await projectsResponse.json()
-      const analyticsData = await analyticsResponse.json()
+      const dashboardData = {
+        analytics: analyticsResponse.success ? analyticsResponse.data : null,
+        projects: projectsResponse.success ? projectsResponse.data : null,
+        status: statusResponse.success ? statusResponse.data : null,
+        timestamp: new Date().toISOString(),
+      }
 
-      if (usersData.success) setUsers(usersData.data)
-      if (projectsData.success) setProjects(projectsData.data)
-      if (analyticsData.success) setAnalytics(analyticsData.data)
-    } catch (error) {
-      console.error("Failed to fetch data:", error)
+      setRealData(dashboardData)
+      logger.info("Real dashboard data loaded successfully")
+    } catch (error: any) {
+      logger.error("Failed to load dashboard data", { error: error.message })
+      setError(error.message)
     } finally {
       setLoading(false)
     }
   }
 
-  const filteredProjects = projects.filter((project) => {
-    const matchesSearch =
-      project.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      project.description?.toLowerCase().includes(searchTerm.toLowerCase())
-    const matchesStatus = statusFilter === "all" || project.status === statusFilter
-    return matchesSearch && matchesStatus
-  })
+  useEffect(() => {
+    loadRealDashboardData()
+
+    // Refresh data every 30 seconds
+    const interval = setInterval(loadRealDashboardData, 30000)
+    return () => clearInterval(interval)
+  }, [])
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-slate-50 flex items-center justify-center">
-        <div className="text-center">
-          <div className="w-8 h-8 bg-slate-900 rounded-lg flex items-center justify-center mx-auto mb-4">
-            <span className="text-white font-bold text-sm">W</span>
+      <div className="min-h-screen bg-gradient-to-br from-black via-slate-900 to-slate-800 text-white">
+        <Navbar />
+        <div className="flex items-center justify-center h-96">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-cyan-400 mx-auto mb-4"></div>
+            <div className="text-slate-300">Loading real dashboard data...</div>
           </div>
-          <p className="text-slate-600">Loading dashboard...</p>
         </div>
       </div>
     )
   }
 
   return (
-    <div className="min-h-screen bg-slate-50">
-      {/* Header */}
-      <header className="bg-white border-b">
-        <div className="container mx-auto px-4 py-4">
+    <div className="min-h-screen bg-gradient-to-br from-black via-slate-900 to-slate-800 text-white">
+      <Navbar />
+
+      <div className="container mx-auto px-6 py-8">
+        {/* Header */}
+        <div className="mb-8">
           <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-2">
-              <div className="w-8 h-8 bg-slate-900 rounded-lg flex items-center justify-center">
-                <span className="text-white font-bold text-sm">W</span>
+            <div className="flex items-center gap-4">
+              <div className="relative">
+                <BarChart3 className="h-10 w-10 text-cyan-400" />
+                <Crown className="absolute -top-1 -right-1 h-5 w-5 text-yellow-400" />
               </div>
-              <h1 className="text-xl font-bold text-slate-900">The Wolf Dashboard</h1>
+              <div>
+                <h1 className="text-4xl font-bold bg-gradient-to-r from-cyan-400 to-blue-400 bg-clip-text text-transparent">
+                  Wolf Platform Dashboard
+                </h1>
+                <p className="text-slate-400">Real-time analytics and system management</p>
+              </div>
             </div>
-            <Button>
-              <Plus className="w-4 h-4 mr-2" />
-              Add Project
-            </Button>
+            <div className="flex items-center gap-3">
+              <Badge className="bg-emerald-500/20 text-emerald-300 border border-emerald-400/50">
+                <Activity className="h-3 w-3 mr-1 animate-pulse" />
+                LIVE DATA
+              </Badge>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={loadRealDashboardData}
+                className="border-cyan-400/50 text-cyan-300 hover:bg-cyan-400/10"
+              >
+                <RefreshCw className="h-4 w-4 mr-2" />
+                Refresh
+              </Button>
+            </div>
           </div>
         </div>
-      </header>
 
-      <div className="container mx-auto px-4 py-8">
-        {/* Analytics Cards */}
-        {analytics && (
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Total Users</CardTitle>
-                <Users className="h-4 w-4 text-muted-foreground" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">{analytics.totalusers?.toLocaleString() || "0"}</div>
-                <p className="text-xs text-muted-foreground">+12% from last month</p>
-              </CardContent>
-            </Card>
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Active Sessions</CardTitle>
-                <Activity className="h-4 w-4 text-muted-foreground" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">{analytics.activesessions?.toLocaleString() || "0"}</div>
-                <p className="text-xs text-muted-foreground">+8% from last hour</p>
-              </CardContent>
-            </Card>
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Growth Rate</CardTitle>
-                <TrendingUp className="h-4 w-4 text-muted-foreground" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">{analytics.growthrate || "0"}%</div>
-                <p className="text-xs text-muted-foreground">+4% from last quarter</p>
-              </CardContent>
-            </Card>
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Revenue</CardTitle>
-                <TrendingUp className="h-4 w-4 text-muted-foreground" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">${analytics.revenue?.toLocaleString() || "0"}</div>
-                <p className="text-xs text-muted-foreground">+15% from last month</p>
-              </CardContent>
-            </Card>
-          </div>
+        {/* Error Alert */}
+        {error && (
+          <Card className="mb-6 border-red-400/50 bg-red-500/10">
+            <CardContent className="p-4">
+              <div className="flex items-center gap-2 text-red-300">
+                <AlertCircle className="h-4 w-4" />
+                <span>Error loading dashboard data: {error}</span>
+              </div>
+            </CardContent>
+          </Card>
         )}
 
-        {/* Projects Section */}
-        <Card>
-          <CardHeader>
-            <div className="flex items-center justify-between">
-              <div>
-                <CardTitle>Projects Management</CardTitle>
-                <CardDescription>Manage and monitor all projects in your workspace</CardDescription>
+        {/* Real Data Overview */}
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+          <Card className="bg-gradient-to-r from-cyan-500/10 to-blue-500/10 border border-cyan-400/30">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium text-cyan-300">Total Projects</CardTitle>
+              <TrendingUp className="h-4 w-4 text-cyan-400" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold text-cyan-400">
+                {realData.analytics?.totalProjects || realData.projects?.stats?.total || 0}
               </div>
-              <div className="flex items-center space-x-2">
-                <div className="relative">
-                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
-                  <Input
-                    placeholder="Search projects..."
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                    className="pl-10 w-64"
-                  />
-                </div>
-                <Select value={statusFilter} onValueChange={setStatusFilter}>
-                  <SelectTrigger className="w-32">
-                    <Filter className="w-4 h-4 mr-2" />
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">All Status</SelectItem>
-                    <SelectItem value="active">Active</SelectItem>
-                    <SelectItem value="planning">Planning</SelectItem>
-                    <SelectItem value="completed">Completed</SelectItem>
-                  </SelectContent>
-                </Select>
+              <p className="text-xs text-slate-400">Real project count</p>
+            </CardContent>
+          </Card>
+
+          <Card className="bg-gradient-to-r from-emerald-500/10 to-green-500/10 border border-emerald-400/30">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium text-emerald-300">Active Projects</CardTitle>
+              <Activity className="h-4 w-4 text-emerald-400" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold text-emerald-400">
+                {realData.analytics?.activeProjects || realData.projects?.stats?.active || 0}
               </div>
-            </div>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-4">
-              {filteredProjects.map((project) => (
-                <div key={project.id} className="flex items-center justify-between p-4 border rounded-lg">
-                  <div className="flex items-center space-x-4">
-                    <div className="w-10 h-10 bg-slate-100 rounded-full flex items-center justify-center">
-                      <FolderOpen className="w-5 h-5 text-slate-700" />
+              <p className="text-xs text-slate-400">Currently active</p>
+            </CardContent>
+          </Card>
+
+          <Card className="bg-gradient-to-r from-purple-500/10 to-pink-500/10 border border-purple-400/30">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium text-purple-300">System Status</CardTitle>
+              <CheckCircle className="h-4 w-4 text-purple-400" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold text-purple-400">
+                {realData.status?.status === "healthy" ? "HEALTHY" : "CHECKING"}
+              </div>
+              <p className="text-xs text-slate-400">Real system status</p>
+            </CardContent>
+          </Card>
+
+          <Card className="bg-gradient-to-r from-orange-500/10 to-red-500/10 border border-orange-400/30">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium text-orange-300">Response Time</CardTitle>
+              <Zap className="h-4 w-4 text-orange-400" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold text-orange-400">{realData.status?.responseTime || 0}ms</div>
+              <p className="text-xs text-slate-400">API response time</p>
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Main Dashboard Tabs */}
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+          <TabsList className="grid w-full grid-cols-5 mb-8 bg-gradient-to-r from-slate-800 to-slate-700 border border-cyan-400/30">
+            <TabsTrigger value="overview">Overview</TabsTrigger>
+            <TabsTrigger value="customizable">Customizable</TabsTrigger>
+            <TabsTrigger value="projects">Projects</TabsTrigger>
+            <TabsTrigger value="collaborative">Collaborative</TabsTrigger>
+            <TabsTrigger value="ai">AI Insights</TabsTrigger>
+          </TabsList>
+
+          <TabsContent value="overview">
+            <div className="space-y-6">
+              <Card className="bg-gradient-to-r from-slate-800/90 to-slate-700/90 backdrop-blur-sm border border-slate-600/30">
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-3">
+                    <BarChart3 className="h-5 w-5 text-cyan-400" />
+                    Real System Overview
+                    <Badge className="bg-emerald-500/20 text-emerald-300 border border-emerald-400/50">
+                      <Activity className="h-3 w-3 mr-1" />
+                      LIVE
+                    </Badge>
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div>
+                      <h3 className="text-lg font-semibold text-slate-200 mb-4">System Health</h3>
+                      <div className="space-y-3">
+                        <div className="flex justify-between items-center">
+                          <span className="text-slate-300">Database</span>
+                          <Badge className="bg-emerald-500/20 text-emerald-300">
+                            {realData.status?.checks?.database?.status || "Unknown"}
+                          </Badge>
+                        </div>
+                        <div className="flex justify-between items-center">
+                          <span className="text-slate-300">Environment</span>
+                          <Badge className="bg-cyan-500/20 text-cyan-300">
+                            {realData.status?.environment?.nodeEnv || "Unknown"}
+                          </Badge>
+                        </div>
+                        <div className="flex justify-between items-center">
+                          <span className="text-slate-300">Platform</span>
+                          <Badge className="bg-yellow-500/20 text-yellow-300">
+                            {realData.status?.environment?.platform || "Unknown"}
+                          </Badge>
+                        </div>
+                      </div>
                     </div>
                     <div>
-                      <h4 className="font-medium">{project.name}</h4>
-                      <p className="text-sm text-muted-foreground">{project.description}</p>
+                      <h3 className="text-lg font-semibold text-slate-200 mb-4">Real Data Summary</h3>
+                      <div className="space-y-3">
+                        <div className="flex justify-between items-center">
+                          <span className="text-slate-300">Projects</span>
+                          <span className="text-cyan-400 font-bold">{realData.projects?.data?.length || 0}</span>
+                        </div>
+                        <div className="flex justify-between items-center">
+                          <span className="text-slate-300">Analytics Records</span>
+                          <span className="text-emerald-400 font-bold">{realData.analytics?.metrics?.length || 0}</span>
+                        </div>
+                        <div className="flex justify-between items-center">
+                          <span className="text-slate-300">Last Updated</span>
+                          <span className="text-slate-400 text-sm">
+                            {new Date(realData.timestamp || Date.now()).toLocaleTimeString()}
+                          </span>
+                        </div>
+                      </div>
                     </div>
                   </div>
-                  <div className="flex items-center space-x-4">
-                    <Badge variant={project.status === "active" ? "default" : "secondary"}>{project.status}</Badge>
-                    <span className="text-sm text-muted-foreground">
-                      {new Date(project.created_at).toLocaleDateString()}
-                    </span>
-                    <Button variant="outline" size="sm">
-                      Edit
-                    </Button>
-                  </div>
-                </div>
-              ))}
-              {filteredProjects.length === 0 && (
-                <div className="text-center py-8 text-muted-foreground">No projects found matching your criteria.</div>
+                </CardContent>
+              </Card>
+
+              {/* Real Projects Preview */}
+              {realData.projects?.data && realData.projects.data.length > 0 && (
+                <Card className="bg-gradient-to-r from-slate-800/90 to-slate-700/90 backdrop-blur-sm border border-slate-600/30">
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-3">
+                      <Rocket className="h-5 w-5 text-purple-400" />
+                      Recent Real Projects
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                      {realData.projects.data.slice(0, 3).map((project: any) => (
+                        <Card key={project.id} className="bg-slate-800/50 border border-slate-600/30">
+                          <CardHeader className="pb-2">
+                            <CardTitle className="text-sm">{project.name}</CardTitle>
+                          </CardHeader>
+                          <CardContent>
+                            <div className="space-y-2">
+                              <div className="flex justify-between text-sm">
+                                <span>Status:</span>
+                                <Badge className="bg-emerald-500/20 text-emerald-300 text-xs">{project.status}</Badge>
+                              </div>
+                              <div className="flex justify-between text-sm">
+                                <span>Progress:</span>
+                                <span className="text-cyan-400">{project.progress}%</span>
+                              </div>
+                              <div className="flex justify-between text-sm">
+                                <span>Priority:</span>
+                                <Badge className="bg-yellow-500/20 text-yellow-300 text-xs">{project.priority}</Badge>
+                              </div>
+                            </div>
+                          </CardContent>
+                        </Card>
+                      ))}
+                    </div>
+                  </CardContent>
+                </Card>
               )}
             </div>
-          </CardContent>
-        </Card>
+          </TabsContent>
 
-        {/* Users Summary */}
-        <Card className="mt-8">
-          <CardHeader>
-            <CardTitle>Users Overview</CardTitle>
-            <CardDescription>Quick summary of user accounts</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{users.length} Total Users</div>
-            <p className="text-sm text-muted-foreground">
-              {users.filter((u) => u.status === "active").length} active users
-            </p>
-          </CardContent>
-        </Card>
+          <TabsContent value="customizable">
+            <CustomizableLayout />
+          </TabsContent>
+
+          <TabsContent value="projects">
+            <AdvancedProjectManager />
+          </TabsContent>
+
+          <TabsContent value="collaborative">
+            <CollaborativeDashboard projectId="demo-project" projectName="Wolf Platform Demo" />
+          </TabsContent>
+
+          <TabsContent value="ai">
+            <AIDashboard />
+          </TabsContent>
+        </Tabs>
       </div>
     </div>
   )

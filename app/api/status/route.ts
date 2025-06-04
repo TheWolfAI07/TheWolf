@@ -1,42 +1,71 @@
 import { NextResponse } from "next/server"
+import { checkSupabaseConnection } from "@/lib/supabase"
+import { logger } from "@/lib/logger"
+import { config } from "@/lib/config"
 
 export async function GET() {
   try {
     const startTime = Date.now()
 
-    const status = {
-      status: "healthy",
-      timestamp: new Date().toISOString(),
-      message: "✅ Wolf Platform is operational",
+    logger.info("Status API: Starting system health check")
+
+    // Check real Supabase connection
+    const dbStatus = await checkSupabaseConnection()
+
+    const responseTime = Date.now() - startTime
+
+    // Determine overall status based on real checks
+    let status = "healthy"
+    let message = "🐺 Wolf Platform - All Systems Operational"
+
+    if (!dbStatus.connected) {
+      status = "degraded"
+      message = "🐺 Wolf Platform - Database Connection Issues"
+    }
+
+    const systemStatus = {
+      status,
+      message,
       environment: {
         nodeEnv: process.env.NODE_ENV || "development",
         hasSupabaseUrl: !!process.env.NEXT_PUBLIC_SUPABASE_URL,
         hasSupabaseKey: !!process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
         hasPostgresUrl: !!process.env.POSTGRES_URL,
-        platform: "vercel",
+        platform: process.env.VERCEL ? "vercel" : "local",
       },
-      version: "1.0.0",
-      responseTime: Date.now() - startTime,
+      checks: {
+        database: {
+          status: dbStatus.connected ? "healthy" : "error",
+          responseTime: dbStatus.responseTime || 0,
+          error: dbStatus.error || null,
+        },
+      },
+      responseTime,
+      version: config.system.version,
+      timestamp: new Date().toISOString(),
       serverTime: new Date().toLocaleString(),
+      setupRequired: !dbStatus.connected,
     }
 
-    return NextResponse.json(status, {
-      headers: {
-        "Cache-Control": "no-cache, no-store, must-revalidate",
-        Pragma: "no-cache",
-        Expires: "0",
-      },
+    logger.info("Status check completed", {
+      status,
+      responseTime,
+      dbConnected: dbStatus.connected,
     })
+
+    return NextResponse.json(systemStatus)
   } catch (error: any) {
-    console.error("Status API error:", error)
+    logger.error("Status API error", {
+      error: error.message,
+      stack: error.stack,
+    })
 
     return NextResponse.json(
       {
         status: "error",
-        message: "❌ Platform status check failed",
+        message: "🐺 Wolf Platform - System Error",
         error: error.message,
         timestamp: new Date().toISOString(),
-        version: "1.0.0",
       },
       { status: 500 },
     )

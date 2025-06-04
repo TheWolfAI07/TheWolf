@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server"
+import { createServerSupabaseClient } from "@/lib/supabase"
 import { logger } from "@/lib/logger"
-import { config } from "@/lib/config"
 
 export async function GET(request: Request) {
   try {
@@ -10,103 +10,70 @@ export async function GET(request: Request) {
 
     logger.info("Analytics API GET request", { timeframe, category })
 
-    // Always return demo data for now to avoid database schema issues
-    logger.info("Using demo analytics data to avoid database schema issues")
+    const supabase = createServerSupabaseClient()
 
-    // Calculate time range for demo purposes
-    const now = new Date()
-    let startTime: Date
+    // Get real analytics data from database
+    const { data: analyticsData, error: analyticsError } = await supabase
+      .from("wolf_analytics")
+      .select("*")
+      .order("created_at", { ascending: false })
+      .limit(100)
 
-    switch (timeframe) {
-      case "1h":
-        startTime = new Date(now.getTime() - 60 * 60 * 1000)
-        break
-      case "24h":
-        startTime = new Date(now.getTime() - 24 * 60 * 60 * 1000)
-        break
-      case "7d":
-        startTime = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000)
-        break
-      case "30d":
-        startTime = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000)
-        break
-      default:
-        startTime = new Date(now.getTime() - 24 * 60 * 60 * 1000)
+    if (analyticsError) {
+      logger.error("Failed to fetch analytics", { error: analyticsError.message })
+      throw analyticsError
     }
 
-    // Generate realistic demo data based on timeframe
-    const getTimeframeMultiplier = (tf: string) => {
-      switch (tf) {
-        case "1h":
-          return 0.1
-        case "24h":
-          return 1
-        case "7d":
-          return 7
-        case "30d":
-          return 30
-        default:
-          return 1
-      }
+    // Get real project data
+    const { data: projectsData, error: projectsError } = await supabase.from("wolf_projects").select("*")
+
+    if (projectsError) {
+      logger.error("Failed to fetch projects", { error: projectsError.message })
+      throw projectsError
     }
 
-    const multiplier = getTimeframeMultiplier(timeframe)
+    // Calculate real metrics
+    const totalProjects = projectsData?.length || 0
+    const activeProjects = projectsData?.filter((p) => p.status === "active").length || 0
+    const completedProjects = projectsData?.filter((p) => p.status === "completed").length || 0
+    const avgProgress =
+      projectsData?.length > 0
+        ? Math.round(projectsData.reduce((sum, p) => sum + (p.progress || 0), 0) / projectsData.length)
+        : 0
 
-    // Calculate system uptime
-    const launchDate = config.system.launchDate
-    const uptimeMs = now.getTime() - launchDate.getTime()
-    const uptimeDays = Math.floor(uptimeMs / (1000 * 60 * 60 * 24))
-    const uptimeHours = Math.floor((uptimeMs % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60))
-    const systemUptime = `${uptimeDays}d ${uptimeHours}h`
+    // Get real activities
+    const { data: activitiesData, error: activitiesError } = await supabase
+      .from("wolf_activities")
+      .select("*")
+      .order("created_at", { ascending: false })
+      .limit(50)
 
-    // Generate demo metrics if category is specified
-    let metrics = []
-    if (category) {
-      metrics = [
-        {
-          id: "demo-1",
-          metric_name: "user_activity",
-          metric_value: Math.floor(Math.random() * 100 * multiplier),
-          metric_type: "counter",
-          category,
-          subcategory: "engagement",
-          timestamp: new Date(now.getTime() - Math.random() * 3600000).toISOString(),
-        },
-        {
-          id: "demo-2",
-          metric_name: "system_performance",
-          metric_value: 95 + Math.random() * 5,
-          metric_type: "gauge",
-          category,
-          subcategory: "performance",
-          timestamp: new Date(now.getTime() - Math.random() * 3600000).toISOString(),
-        },
-      ]
+    if (activitiesError) {
+      logger.error("Failed to fetch activities", { error: activitiesError.message })
     }
 
     const analytics = {
-      totalProjects: Math.floor(12 * multiplier),
-      activeProjects: Math.floor(8 * multiplier),
-      completedProjects: Math.floor(4 * multiplier),
-      avgProgress: 67 + Math.floor(Math.random() * 20),
-      recentActivities: Math.floor(15 * multiplier),
-      systemUptime,
+      totalProjects,
+      activeProjects,
+      completedProjects,
+      avgProgress,
+      recentActivities: activitiesData?.length || 0,
+      systemUptime: calculateUptime(),
       timeframe,
-      metrics,
-      timestamp: now.toISOString(),
+      metrics: analyticsData || [],
+      timestamp: new Date().toISOString(),
     }
 
-    logger.info("Analytics data generated successfully", {
-      totalProjects: analytics.totalProjects,
-      activeProjects: analytics.activeProjects,
-      recentActivities: analytics.recentActivities,
-      mode: "demo",
+    logger.info("Real analytics data retrieved successfully", {
+      totalProjects,
+      activeProjects,
+      metricsCount: analyticsData?.length || 0,
     })
 
     return NextResponse.json({
       success: true,
       data: analytics,
-      message: "Analytics data retrieved successfully (demo mode)",
+      message: "Real analytics data retrieved successfully",
     })
   } catch (error: any) {
     logger.error("Analytics API error", {
@@ -114,24 +81,14 @@ export async function GET(request: Request) {
       stack: error.stack,
     })
 
-    // Return basic demo data on any error
-    const fallbackAnalytics = {
-      totalProjects: 12,
-      activeProjects: 8,
-      completedProjects: 4,
-      avgProgress: 67,
-      recentActivities: 15,
-      systemUptime: "5d 12h",
-      timeframe: "24h",
-      metrics: [],
-      timestamp: new Date().toISOString(),
-    }
-
-    return NextResponse.json({
-      success: true,
-      data: fallbackAnalytics,
-      message: "Analytics data retrieved successfully (fallback mode)",
-    })
+    return NextResponse.json(
+      {
+        success: false,
+        error: error.message,
+        message: "Failed to retrieve analytics data",
+      },
+      { status: 500 },
+    )
   }
 }
 
@@ -156,29 +113,39 @@ export async function POST(request: Request) {
       )
     }
 
-    // For now, always return demo success to avoid database issues
-    logger.info("Analytics POST using demo mode to avoid database schema issues")
+    const supabase = createServerSupabaseClient()
 
-    const demoResponse = {
-      id: "demo-" + Date.now(),
-      metric_name,
-      metric_value: Number(metric_value),
-      metric_type,
-      category,
-      subcategory,
-      dimensions,
-      timestamp: new Date().toISOString(),
+    // Insert real analytics entry
+    const { data, error } = await supabase
+      .from("wolf_analytics")
+      .insert([
+        {
+          metric_name,
+          metric_value: Number(metric_value),
+          metric_type,
+          category,
+          subcategory,
+          dimensions,
+          timestamp: new Date().toISOString(),
+        },
+      ])
+      .select()
+      .single()
+
+    if (error) {
+      logger.error("Failed to create analytics entry", { error: error.message })
+      throw error
     }
 
-    logger.info("Analytics entry created successfully (demo mode)", {
-      id: demoResponse.id,
+    logger.info("Analytics entry created successfully", {
+      id: data.id,
       metric_name,
     })
 
     return NextResponse.json({
       success: true,
-      data: demoResponse,
-      message: "Analytics entry created successfully (demo mode)",
+      data,
+      message: "Analytics entry created successfully",
     })
   } catch (error: any) {
     logger.error("Create analytics entry error", {
@@ -186,11 +153,22 @@ export async function POST(request: Request) {
       stack: error.stack,
     })
 
-    // Return demo success instead of error
-    return NextResponse.json({
-      success: true,
-      data: { id: "demo-" + Date.now() },
-      message: "Analytics entry created successfully (fallback mode)",
-    })
+    return NextResponse.json(
+      {
+        success: false,
+        error: error.message,
+        message: "Failed to create analytics entry",
+      },
+      { status: 500 },
+    )
   }
+}
+
+function calculateUptime(): string {
+  const launchDate = new Date("2024-01-01")
+  const now = new Date()
+  const uptimeMs = now.getTime() - launchDate.getTime()
+  const uptimeDays = Math.floor(uptimeMs / (1000 * 60 * 60 * 24))
+  const uptimeHours = Math.floor((uptimeMs % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60))
+  return `${uptimeDays}d ${uptimeHours}h`
 }

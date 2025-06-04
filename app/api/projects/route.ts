@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server"
+import { createServerSupabaseClient } from "@/lib/supabase"
 import { logger } from "@/lib/logger"
 
 export async function GET(request: Request) {
@@ -10,6 +11,7 @@ export async function GET(request: Request) {
     const search = searchParams.get("search") || ""
     const sortBy = searchParams.get("sortBy") || "created_at"
     const sortOrder = searchParams.get("sortOrder") || "desc"
+    const priority = searchParams.get("priority")
 
     logger.info("Projects API GET request", {
       page,
@@ -18,117 +20,78 @@ export async function GET(request: Request) {
       search,
       sortBy,
       sortOrder,
+      priority,
     })
 
-    // For now, always return demo data to avoid database schema issues
-    logger.info("Using demo projects data to avoid database schema issues")
+    const supabase = createServerSupabaseClient()
 
-    // Generate realistic demo projects
-    const generateDemoProjects = (count: number, pageOffset = 0) => {
-      return Array(count)
-        .fill(0)
-        .map((_, i) => {
-          const projectIndex = i + pageOffset
-          const statuses = ["active", "completed", "inactive", "archived"]
-          const priorities = ["low", "medium", "high", "urgent"]
+    // Build query
+    let query = supabase.from("wolf_projects").select("*", { count: "exact" })
 
-          return {
-            id: `demo-project-${projectIndex}`,
-            name: `Wolf Project ${projectIndex + 1}`,
-            description: `Advanced project management and analytics for Wolf Platform. Project ${projectIndex + 1} focuses on ${
-              [
-                "AI integration",
-                "data analytics",
-                "user experience",
-                "performance optimization",
-                "security enhancement",
-              ][projectIndex % 5]
-            }.`,
-            status: statuses[projectIndex % statuses.length],
-            priority: priorities[projectIndex % priorities.length],
-            progress: projectIndex % 4 === 0 ? 100 : Math.floor(Math.random() * 90) + 10,
-            start_date: new Date(Date.now() - (projectIndex + 1) * 86400000 * 7).toISOString().split("T")[0],
-            end_date: new Date(Date.now() + (30 - projectIndex) * 86400000).toISOString().split("T")[0],
-            budget: (Math.random() * 50000 + 10000).toFixed(2),
-            tags: [
-              ["frontend", "react", "ui"],
-              ["backend", "api", "database"],
-              ["ai", "machine-learning", "analytics"],
-              ["security", "authentication", "encryption"],
-              ["performance", "optimization", "caching"],
-            ][projectIndex % 5],
-            metadata: {
-              team_size: Math.floor(Math.random() * 8) + 2,
-              complexity: ["low", "medium", "high"][projectIndex % 3],
-              client: `Client ${String.fromCharCode(65 + (projectIndex % 26))}`,
-            },
-            created_at: new Date(Date.now() - projectIndex * 86400000).toISOString(),
-            updated_at: new Date(Date.now() - projectIndex * 43200000).toISOString(),
-          }
-        })
+    // Apply filters
+    if (status) {
+      query = query.eq("status", status)
     }
 
-    // Apply filters to demo data
-    let demoProjects = generateDemoProjects(50) // Generate 50 total projects
-
-    if (status) {
-      demoProjects = demoProjects.filter((p) => p.status === status)
+    if (priority) {
+      query = query.eq("priority", priority)
     }
 
     if (search) {
-      demoProjects = demoProjects.filter(
-        (p) =>
-          p.name.toLowerCase().includes(search.toLowerCase()) ||
-          p.description.toLowerCase().includes(search.toLowerCase()),
-      )
+      query = query.or(`name.ilike.%${search}%,description.ilike.%${search}%`)
     }
 
     // Apply sorting
-    demoProjects.sort((a, b) => {
-      let aVal = a[sortBy as keyof typeof a]
-      let bVal = b[sortBy as keyof typeof b]
-
-      if (typeof aVal === "string") aVal = aVal.toLowerCase()
-      if (typeof bVal === "string") bVal = bVal.toLowerCase()
-
-      if (sortOrder === "asc") {
-        return aVal < bVal ? -1 : aVal > bVal ? 1 : 0
-      } else {
-        return aVal > bVal ? -1 : aVal < bVal ? 1 : 0
-      }
-    })
+    query = query.order(sortBy, { ascending: sortOrder === "asc" })
 
     // Apply pagination
-    const total = demoProjects.length
     const from = (page - 1) * limit
-    const to = from + limit
-    const paginatedProjects = demoProjects.slice(from, to)
+    const to = from + limit - 1
+    query = query.range(from, to)
 
-    // Calculate stats
-    const stats = {
-      total,
-      active: demoProjects.filter((p) => p.status === "active").length,
-      completed: demoProjects.filter((p) => p.status === "completed").length,
-      high_priority: demoProjects.filter((p) => p.priority === "high").length,
-      avg_progress: Math.round(demoProjects.reduce((sum, p) => sum + p.progress, 0) / demoProjects.length),
+    const { data: projects, error, count } = await query
+
+    if (error) {
+      logger.error("Failed to fetch projects", { error: error.message })
+      throw error
     }
 
-    logger.info("Projects fetched successfully (demo mode)", {
-      count: paginatedProjects.length,
-      total,
+    // Calculate real stats
+    const { data: allProjects, error: statsError } = await supabase
+      .from("wolf_projects")
+      .select("status, priority, progress")
+
+    if (statsError) {
+      logger.error("Failed to fetch project stats", { error: statsError.message })
+    }
+
+    const stats = {
+      total: count || 0,
+      active: allProjects?.filter((p) => p.status === "active").length || 0,
+      completed: allProjects?.filter((p) => p.status === "completed").length || 0,
+      high_priority: allProjects?.filter((p) => p.priority === "high").length || 0,
+      avg_progress:
+        allProjects?.length > 0
+          ? Math.round(allProjects.reduce((sum, p) => sum + (p.progress || 0), 0) / allProjects.length)
+          : 0,
+    }
+
+    logger.info("Real projects fetched successfully", {
+      count: projects?.length || 0,
+      total: count || 0,
     })
 
     return NextResponse.json({
       success: true,
-      data: paginatedProjects,
+      data: projects || [],
       pagination: {
         page,
         limit,
-        total,
-        totalPages: Math.ceil(total / limit),
+        total: count || 0,
+        totalPages: Math.ceil((count || 0) / limit),
       },
       stats,
-      message: `Retrieved ${paginatedProjects.length} projects (demo mode)`,
+      message: `Retrieved ${projects?.length || 0} real projects`,
     })
   } catch (error: any) {
     logger.error("Projects API error", {
@@ -136,45 +99,31 @@ export async function GET(request: Request) {
       stack: error.stack,
     })
 
-    // Return basic demo data on error
-    const basicDemoProjects = Array(5)
-      .fill(0)
-      .map((_, i) => ({
-        id: `fallback-${i}`,
-        name: `Fallback Project ${i + 1}`,
-        description: `This is a fallback project description for project ${i + 1}`,
-        status: i % 2 === 0 ? "active" : "completed",
-        priority: "medium",
-        progress: i % 2 === 0 ? Math.floor(Math.random() * 80) + 10 : 100,
-        created_at: new Date(Date.now() - i * 86400000).toISOString(),
-        updated_at: new Date(Date.now() - i * 43200000).toISOString(),
-      }))
-
-    return NextResponse.json({
-      success: true,
-      data: basicDemoProjects,
-      pagination: {
-        page: 1,
-        limit: 10,
-        total: 5,
-        totalPages: 1,
+    return NextResponse.json(
+      {
+        success: false,
+        error: error.message,
+        message: "Failed to retrieve projects",
       },
-      stats: {
-        total: 5,
-        active: 3,
-        completed: 2,
-        high_priority: 1,
-        avg_progress: 65,
-      },
-      message: "Retrieved projects (fallback mode)",
-    })
+      { status: 500 },
+    )
   }
 }
 
 export async function POST(request: Request) {
   try {
     const body = await request.json()
-    const { name, description, status = "active", priority = "medium", start_date, end_date, budget, tags = [] } = body
+    const {
+      name,
+      description,
+      status = "active",
+      priority = "medium",
+      start_date,
+      end_date,
+      budget,
+      tags = [],
+      progress = 0,
+    } = body
 
     logger.info("Projects API POST request", {
       name,
@@ -192,32 +141,52 @@ export async function POST(request: Request) {
       )
     }
 
-    // Return demo success response
-    const demoProject = {
-      id: `demo-${Date.now()}`,
-      name,
-      description,
-      status,
-      priority,
-      progress: 0,
-      start_date,
-      end_date,
-      budget: budget ? Number.parseFloat(budget) : null,
-      tags,
-      metadata: {},
-      created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString(),
+    const supabase = createServerSupabaseClient()
+
+    // Insert real project
+    const { data: project, error } = await supabase
+      .from("wolf_projects")
+      .insert([
+        {
+          name,
+          description,
+          status,
+          priority,
+          progress,
+          start_date,
+          end_date,
+          budget: budget ? Number.parseFloat(budget) : null,
+          tags,
+          metadata: {},
+        },
+      ])
+      .select()
+      .single()
+
+    if (error) {
+      logger.error("Failed to create project", { error: error.message })
+      throw error
     }
 
-    logger.info("Project created successfully (demo mode)", {
-      id: demoProject.id,
-      name: demoProject.name,
+    // Log activity
+    await supabase.from("wolf_activities").insert([
+      {
+        action: "create_project",
+        resource_type: "project",
+        resource_id: project.id,
+        details: { project_name: name, status, priority },
+      },
+    ])
+
+    logger.info("Real project created successfully", {
+      id: project.id,
+      name: project.name,
     })
 
     return NextResponse.json({
       success: true,
-      data: demoProject,
-      message: "Project created successfully (demo mode)",
+      data: project,
+      message: "Project created successfully",
     })
   } catch (error: any) {
     logger.error("Create project error", {
@@ -225,21 +194,14 @@ export async function POST(request: Request) {
       stack: error.stack,
     })
 
-    // Return demo success response on error
-    return NextResponse.json({
-      success: true,
-      data: {
-        id: `demo-${Date.now()}`,
-        name: "New Project",
-        description: "",
-        status: "active",
-        priority: "medium",
-        progress: 0,
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString(),
+    return NextResponse.json(
+      {
+        success: false,
+        error: error.message,
+        message: "Failed to create project",
       },
-      message: "Project created successfully (fallback mode)",
-    })
+      { status: 500 },
+    )
   }
 }
 
@@ -263,21 +225,41 @@ export async function PUT(request: Request) {
       )
     }
 
-    // Return demo success response
-    const updatedProject = {
-      id,
-      ...updateData,
-      updated_at: new Date().toISOString(),
+    const supabase = createServerSupabaseClient()
+
+    // Update real project
+    const { data: project, error } = await supabase
+      .from("wolf_projects")
+      .update({
+        ...updateData,
+        budget: updateData.budget ? Number.parseFloat(updateData.budget) : updateData.budget,
+        updated_at: new Date().toISOString(),
+      })
+      .eq("id", id)
+      .select()
+      .single()
+
+    if (error) {
+      logger.error("Failed to update project", { error: error.message })
+      throw error
     }
 
-    logger.info("Project updated successfully (demo mode)", {
-      id,
-    })
+    // Log activity
+    await supabase.from("wolf_activities").insert([
+      {
+        action: "update_project",
+        resource_type: "project",
+        resource_id: id,
+        details: { updated_fields: Object.keys(updateData) },
+      },
+    ])
+
+    logger.info("Real project updated successfully", { id })
 
     return NextResponse.json({
       success: true,
-      data: updatedProject,
-      message: "Project updated successfully (demo mode)",
+      data: project,
+      message: "Project updated successfully",
     })
   } catch (error: any) {
     logger.error("Update project error", {
@@ -285,15 +267,14 @@ export async function PUT(request: Request) {
       stack: error.stack,
     })
 
-    // Return demo success response on error
-    return NextResponse.json({
-      success: true,
-      data: {
-        id: "unknown",
-        updated_at: new Date().toISOString(),
+    return NextResponse.json(
+      {
+        success: false,
+        error: error.message,
+        message: "Failed to update project",
       },
-      message: "Project updated successfully (fallback mode)",
-    })
+      { status: 500 },
+    )
   }
 }
 
@@ -314,11 +295,31 @@ export async function DELETE(request: Request) {
       )
     }
 
-    logger.info("Project deleted successfully (demo mode)", { id })
+    const supabase = createServerSupabaseClient()
+
+    // Delete real project
+    const { error } = await supabase.from("wolf_projects").delete().eq("id", id)
+
+    if (error) {
+      logger.error("Failed to delete project", { error: error.message })
+      throw error
+    }
+
+    // Log activity
+    await supabase.from("wolf_activities").insert([
+      {
+        action: "delete_project",
+        resource_type: "project",
+        resource_id: id,
+        details: { deleted: true },
+      },
+    ])
+
+    logger.info("Real project deleted successfully", { id })
 
     return NextResponse.json({
       success: true,
-      message: "Project deleted successfully (demo mode)",
+      message: "Project deleted successfully",
     })
   } catch (error: any) {
     logger.error("Delete project error", {
@@ -326,10 +327,13 @@ export async function DELETE(request: Request) {
       stack: error.stack,
     })
 
-    // Return success anyway
-    return NextResponse.json({
-      success: true,
-      message: "Project deleted successfully (fallback mode)",
-    })
+    return NextResponse.json(
+      {
+        success: false,
+        error: error.message,
+        message: "Failed to delete project",
+      },
+      { status: 500 },
+    )
   }
 }
