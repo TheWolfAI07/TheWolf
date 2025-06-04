@@ -7,7 +7,21 @@ import { Badge } from "@/components/ui/badge"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Navbar } from "@/components/navbar"
 import { CryptoAPI } from "@/lib/crypto-api"
-import { CheckCircle, XCircle, AlertTriangle, RefreshCw, Database, Globe, Code, Cpu, FileText } from "lucide-react"
+import {
+  CheckCircle,
+  XCircle,
+  AlertTriangle,
+  RefreshCw,
+  Database,
+  Globe,
+  Code,
+  Cpu,
+  FileText,
+  Settings,
+  Zap,
+  User,
+} from "lucide-react"
+import PreTestCheck from "./pre-test-check"
 
 interface SystemCheck {
   name: string
@@ -22,8 +36,11 @@ export default function DebugPage() {
   const [apiChecks, setApiChecks] = useState<SystemCheck[]>([])
   const [cssChecks, setCssChecks] = useState<SystemCheck[]>([])
   const [dataChecks, setDataChecks] = useState<SystemCheck[]>([])
+  const [supabaseChecks, setSupabaseChecks] = useState<SystemCheck[]>([])
+  const [envChecks, setEnvChecks] = useState<SystemCheck[]>([])
+  const [performanceChecks, setPerformanceChecks] = useState<SystemCheck[]>([])
   const [isLoading, setIsLoading] = useState(true)
-  const [activeTab, setActiveTab] = useState("system")
+  const [activeTab, setActiveTab] = useState("pre-test")
   const [currentTime, setCurrentTime] = useState(new Date())
   const [refreshCount, setRefreshCount] = useState(0)
 
@@ -41,7 +58,15 @@ export default function DebugPage() {
     setRefreshCount((prev) => prev + 1)
 
     try {
-      await Promise.all([checkSystem(), checkApi(), checkCss(), checkData()])
+      await Promise.all([
+        checkSystem(),
+        checkApi(),
+        checkCss(),
+        checkData(),
+        checkSupabase(),
+        checkEnvironment(),
+        checkPerformance(),
+      ])
     } catch (error) {
       console.error("Debug check error:", error)
     } finally {
@@ -411,6 +436,190 @@ export default function DebugPage() {
     return checks
   }
 
+  // Supabase checks
+  const checkSupabase = async () => {
+    const checks: SystemCheck[] = []
+
+    // Test Supabase connection
+    try {
+      const { checkSupabaseConnection } = await import("@/lib/supabase")
+      const connectionResult = await checkSupabaseConnection()
+
+      checks.push({
+        name: "Supabase Connection",
+        status: connectionResult.connected ? "success" : "error",
+        message: connectionResult.connected ? "Connected successfully" : "Connection failed",
+        details: connectionResult.error || "Connection established",
+        timestamp: new Date(),
+      })
+    } catch (error) {
+      checks.push({
+        name: "Supabase Connection",
+        status: "error",
+        message: "Failed to test connection",
+        details: String(error),
+        timestamp: new Date(),
+      })
+    }
+
+    // Test Supabase client creation
+    try {
+      const { createClientSupabaseClient } = await import("@/lib/supabase")
+      const client = createClientSupabaseClient()
+
+      checks.push({
+        name: "Supabase Client Creation",
+        status: client ? "success" : "error",
+        message: client ? "Client created successfully" : "Failed to create client",
+        timestamp: new Date(),
+      })
+    } catch (error) {
+      checks.push({
+        name: "Supabase Client Creation",
+        status: "error",
+        message: "Client creation failed",
+        details: String(error),
+        timestamp: new Date(),
+      })
+    }
+
+    // Test safe database operation
+    try {
+      const { safeDbOperation } = await import("@/lib/supabase")
+      const testOperation = () => Promise.resolve("test")
+      const result = await safeDbOperation(testOperation, "Test operation")
+
+      checks.push({
+        name: "Safe DB Operation",
+        status: result.data === "test" ? "success" : "warning",
+        message: result.data === "test" ? "Function working correctly" : "Function returned unexpected result",
+        details: `Result: ${JSON.stringify(result)}`,
+        timestamp: new Date(),
+      })
+    } catch (error) {
+      checks.push({
+        name: "Safe DB Operation",
+        status: "error",
+        message: "Function test failed",
+        details: String(error),
+        timestamp: new Date(),
+      })
+    }
+
+    // Test edge functions
+    try {
+      const { testEdgeFunctions } = await import("@/lib/supabase")
+      const edgeResult = await testEdgeFunctions()
+
+      checks.push({
+        name: "Edge Functions",
+        status: edgeResult.available ? "success" : "warning",
+        message: edgeResult.available ? `Available (${edgeResult.latency}ms)` : "Not available",
+        details: `Latency: ${edgeResult.latency || "N/A"}ms`,
+        timestamp: new Date(),
+      })
+    } catch (error) {
+      checks.push({
+        name: "Edge Functions",
+        status: "warning",
+        message: "Edge functions test failed",
+        details: String(error),
+        timestamp: new Date(),
+      })
+    }
+
+    setSupabaseChecks(checks)
+    return checks
+  }
+
+  // Environment checks
+  const checkEnvironment = async () => {
+    const checks: SystemCheck[] = []
+
+    // Check required environment variables
+    const requiredEnvVars = ["NEXT_PUBLIC_SUPABASE_URL", "NEXT_PUBLIC_SUPABASE_ANON_KEY", "SUPABASE_SERVICE_ROLE_KEY"]
+
+    requiredEnvVars.forEach((envVar) => {
+      const value = process.env[envVar]
+      checks.push({
+        name: `Environment Variable: ${envVar}`,
+        status: value ? "success" : "error",
+        message: value ? "Set correctly" : "Missing or empty",
+        details: value ? `Length: ${value.length} characters` : "Not found",
+        timestamp: new Date(),
+      })
+    })
+
+    // Check optional environment variables
+    const optionalEnvVars = [
+      "NEXT_PUBLIC_APP_URL",
+      "VERCEL",
+      "NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY",
+      "NEXT_PUBLIC_PAYPAL_CLIENT_ID",
+    ]
+
+    optionalEnvVars.forEach((envVar) => {
+      const value = process.env[envVar]
+      checks.push({
+        name: `Optional Env: ${envVar}`,
+        status: value ? "success" : "warning",
+        message: value ? "Available" : "Not set",
+        details: value ? `Length: ${value.length} characters` : "Optional variable",
+        timestamp: new Date(),
+      })
+    })
+
+    setEnvChecks(checks)
+    return checks
+  }
+
+  // Performance checks
+  const checkPerformance = async () => {
+    const checks: SystemCheck[] = []
+
+    // Memory usage
+    if ("memory" in performance) {
+      const memInfo = (performance as any).memory
+      checks.push({
+        name: "Memory Usage",
+        status: memInfo.usedJSHeapSize < 50000000 ? "success" : "warning",
+        message: `${Math.round(memInfo.usedJSHeapSize / 1024 / 1024)} MB used`,
+        details: `Limit: ${Math.round(memInfo.jsHeapSizeLimit / 1024 / 1024)} MB`,
+        timestamp: new Date(),
+      })
+    }
+
+    // Page load performance
+    const navigation = performance.getEntriesByType("navigation")[0] as PerformanceNavigationTiming
+    if (navigation) {
+      const loadTime = navigation.loadEventEnd - navigation.fetchStart
+      checks.push({
+        name: "Page Load Time",
+        status: loadTime < 3000 ? "success" : loadTime < 5000 ? "warning" : "error",
+        message: `${Math.round(loadTime)}ms`,
+        details: `DOM: ${Math.round(navigation.domContentLoadedEventEnd - navigation.fetchStart)}ms`,
+        timestamp: new Date(),
+      })
+    }
+
+    // Component render test
+    const renderStart = performance.now()
+    await new Promise((resolve) => setTimeout(resolve, 10))
+    const renderEnd = performance.now()
+    const renderTime = renderEnd - renderStart
+
+    checks.push({
+      name: "Component Render Performance",
+      status: renderTime < 100 ? "success" : "warning",
+      message: `${Math.round(renderTime)}ms`,
+      details: "Simulated component render test",
+      timestamp: new Date(),
+    })
+
+    setPerformanceChecks(checks)
+    return checks
+  }
+
   // Run checks on initial load
   useEffect(() => {
     runAllChecks()
@@ -447,138 +656,67 @@ export default function DebugPage() {
       <Navbar />
 
       <div className="container mx-auto px-6 py-8">
-        <div className="flex items-center justify-between mb-8">
-          <div>
-            <h1 className="text-4xl font-bold text-wolf-heading mb-2">Wolf Platform Debug</h1>
-            <p className="text-slate-400">System diagnostics and troubleshooting</p>
-          </div>
-
-          <div className="flex items-center gap-4">
-            <div className="text-right">
-              <div className="text-sm text-slate-400">Current Time</div>
-              <div className="text-xl font-mono text-teal">{currentTime.toLocaleTimeString()}</div>
-            </div>
-
-            <Button onClick={runAllChecks} disabled={isLoading} className="btn-wolf">
-              {isLoading ? <RefreshCw className="h-5 w-5 mr-2 animate-spin" /> : <RefreshCw className="h-5 w-5 mr-2" />}
-              Run Diagnostics
-            </Button>
-          </div>
-        </div>
-
-        <Card className="mb-6 bg-wolf-card wolf-border">
-          <CardContent className="p-6">
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-              <div className="bg-slate-800/50 rounded-lg p-4 text-center">
-                <div className="text-sm text-slate-400 mb-1">System Status</div>
-                <div className="text-xl font-bold text-teal">
-                  {systemChecks.filter((c) => c.status === "success").length} / {systemChecks.length}
-                </div>
-                <div className="text-xs text-slate-500">Checks Passed</div>
-              </div>
-
-              <div className="bg-slate-800/50 rounded-lg p-4 text-center">
-                <div className="text-sm text-slate-400 mb-1">API Status</div>
-                <div className="text-xl font-bold text-teal">
-                  {apiChecks.filter((c) => c.status === "success").length} / {apiChecks.length}
-                </div>
-                <div className="text-xs text-slate-500">Connections OK</div>
-              </div>
-
-              <div className="bg-slate-800/50 rounded-lg p-4 text-center">
-                <div className="text-sm text-slate-400 mb-1">CSS Status</div>
-                <div className="text-xl font-bold text-teal">
-                  {cssChecks.filter((c) => c.status === "success").length} / {cssChecks.length}
-                </div>
-                <div className="text-xs text-slate-500">Styles Verified</div>
-              </div>
-
-              <div className="bg-slate-800/50 rounded-lg p-4 text-center">
-                <div className="text-sm text-slate-400 mb-1">Data Status</div>
-                <div className="text-xl font-bold text-teal">
-                  {dataChecks.filter((c) => c.status === "success").length} / {dataChecks.length}
-                </div>
-                <div className="text-xs text-slate-500">Data Checks Passed</div>
-              </div>
-            </div>
-
-            <div className="mt-4 text-center">
-              <Badge
-                className={
-                  isLoading
-                    ? "bg-blue-500/20 text-blue-300 border-blue-400/50"
-                    : systemChecks.some((c) => c.status === "error") ||
-                        apiChecks.some((c) => c.status === "error") ||
-                        cssChecks.some((c) => c.status === "error") ||
-                        dataChecks.some((c) => c.status === "error")
-                      ? "bg-red-500/20 text-red-300 border-red-400/50"
-                      : systemChecks.some((c) => c.status === "warning") ||
-                          apiChecks.some((c) => c.status === "warning") ||
-                          cssChecks.some((c) => c.status === "warning") ||
-                          dataChecks.some((c) => c.status === "warning")
-                        ? "bg-yellow-500/20 text-yellow-300 border-yellow-400/50"
-                        : "bg-green-500/20 text-green-300 border-green-400/50"
-                }
-              >
-                {isLoading ? (
-                  <>
-                    <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
-                    CHECKING SYSTEM
-                  </>
-                ) : systemChecks.some((c) => c.status === "error") ||
-                  apiChecks.some((c) => c.status === "error") ||
-                  cssChecks.some((c) => c.status === "error") ||
-                  dataChecks.some((c) => c.status === "error") ? (
-                  <>
-                    <XCircle className="h-4 w-4 mr-2" />
-                    SYSTEM ERRORS DETECTED
-                  </>
-                ) : systemChecks.some((c) => c.status === "warning") ||
-                  apiChecks.some((c) => c.status === "warning") ||
-                  cssChecks.some((c) => c.status === "warning") ||
-                  dataChecks.some((c) => c.status === "warning") ? (
-                  <>
-                    <AlertTriangle className="h-4 w-4 mr-2" />
-                    SYSTEM WARNINGS DETECTED
-                  </>
-                ) : (
-                  <>
-                    <CheckCircle className="h-4 w-4 mr-2" />
-                    ALL SYSTEMS OPERATIONAL
-                  </>
-                )}
-              </Badge>
-
-              <div className="text-xs text-slate-500 mt-2">
-                Last check: {new Date().toLocaleTimeString()} • Refresh #{refreshCount}
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
         <Tabs value={activeTab} onValueChange={setActiveTab}>
           <TabsList className="bg-slate-800/50 border-slate-700 mb-6">
-            <TabsTrigger value="system" className="data-[state=active]:bg-teal data-[state=active]:text-black">
+            <TabsTrigger value="pre-test" className="data-[state=active]:bg-teal data-[state=active]:text-black">
+              <User className="h-4 w-4 mr-2" />
+              Pre-Test Check
+            </TabsTrigger>
+            <TabsTrigger value="advanced" className="data-[state=active]:bg-teal data-[state=active]:text-black">
+              <Settings className="h-4 w-4 mr-2" />
+              Advanced Debug
+            </TabsTrigger>
+            <TabsTrigger value="system" className="data-[state=active]:bg-teal data-[state=active]:text-black hidden">
               <Cpu className="h-4 w-4 mr-2" />
               System
             </TabsTrigger>
-            <TabsTrigger value="api" className="data-[state=active]:bg-teal data-[state=active]:text-black">
+            <TabsTrigger value="api" className="data-[state=active]:bg-teal data-[state=active]:text-black hidden">
               <Globe className="h-4 w-4 mr-2" />
               API
             </TabsTrigger>
-            <TabsTrigger value="css" className="data-[state=active]:bg-teal data-[state=active]:text-black">
+            <TabsTrigger value="css" className="data-[state=active]:bg-teal data-[state=active]:text-black hidden">
               <Code className="h-4 w-4 mr-2" />
               CSS
             </TabsTrigger>
-            <TabsTrigger value="data" className="data-[state=active]:bg-teal data-[state=active]:text-black">
+            <TabsTrigger value="data" className="data-[state=active]:bg-teal data-[state=active]:text-black hidden">
               <Database className="h-4 w-4 mr-2" />
               Data
             </TabsTrigger>
-            <TabsTrigger value="logs" className="data-[state=active]:bg-teal data-[state=active]:text-black">
+            <TabsTrigger value="supabase" className="data-[state=active]:bg-teal data-[state=active]:text-black hidden">
+              <Database className="h-4 w-4 mr-2" />
+              Supabase
+            </TabsTrigger>
+            <TabsTrigger
+              value="environment"
+              className="data-[state=active]:bg-teal data-[state=active]:text-black hidden"
+            >
+              <Settings className="h-4 w-4 mr-2" />
+              Environment
+            </TabsTrigger>
+            <TabsTrigger
+              value="performance"
+              className="data-[state=active]:bg-teal data-[state=active]:text-black hidden"
+            >
+              <Zap className="h-4 w-4 mr-2" />
+              Performance
+            </TabsTrigger>
+            <TabsTrigger value="logs" className="data-[state=active]:bg-teal data-[state=active]:text-black hidden">
               <FileText className="h-4 w-4 mr-2" />
               Logs
             </TabsTrigger>
           </TabsList>
+
+          <TabsContent value="pre-test">
+            <PreTestCheck />
+          </TabsContent>
+
+          <TabsContent value="advanced">
+            <div className="text-center py-12">
+              <h2 className="text-2xl font-bold text-white mb-4">Advanced Debug Tools</h2>
+              <p className="text-slate-400">Comprehensive system diagnostics and troubleshooting tools.</p>
+              <p className="text-sm text-slate-500 mt-2">Switch to this tab for detailed technical analysis.</p>
+            </div>
+          </TabsContent>
 
           <TabsContent value="system">
             <Card className="bg-wolf-card wolf-border">
@@ -808,6 +946,126 @@ export default function DebugPage() {
             </Card>
           </TabsContent>
 
+          <TabsContent value="supabase">
+            <Card className="bg-wolf-card wolf-border">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-3">
+                  <Database className="h-5 w-5 text-teal" />
+                  Supabase Diagnostics
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-4">
+                  {supabaseChecks.length > 0 ? (
+                    supabaseChecks.map((check, index) => (
+                      <div key={index} className="bg-slate-800/50 rounded-lg p-4">
+                        <div className="flex items-center justify-between mb-2">
+                          <div className="flex items-center gap-3">
+                            {getStatusIcon(check.status)}
+                            <span className="font-semibold text-white">{check.name}</span>
+                          </div>
+                          <Badge className={`${getStatusColor(check.status)} bg-opacity-20 border border-opacity-50`}>
+                            {check.status.toUpperCase()}
+                          </Badge>
+                        </div>
+                        <p className="text-slate-300 mb-1">{check.message}</p>
+                        {check.details && <p className="text-xs text-slate-500">{check.details}</p>}
+                        <p className="text-xs text-slate-600 mt-2">
+                          Checked at: {check.timestamp.toLocaleTimeString()}
+                        </p>
+                      </div>
+                    ))
+                  ) : (
+                    <div className="text-center py-8">
+                      <RefreshCw className="h-8 w-8 text-slate-500 animate-spin mx-auto mb-4" />
+                      <p className="text-slate-400">Running Supabase checks...</p>
+                    </div>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="environment">
+            <Card className="bg-wolf-card wolf-border">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-3">
+                  <Settings className="h-5 w-5 text-teal" />
+                  Environment Diagnostics
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-4">
+                  {envChecks.length > 0 ? (
+                    envChecks.map((check, index) => (
+                      <div key={index} className="bg-slate-800/50 rounded-lg p-4">
+                        <div className="flex items-center justify-between mb-2">
+                          <div className="flex items-center gap-3">
+                            {getStatusIcon(check.status)}
+                            <span className="font-semibold text-white">{check.name}</span>
+                          </div>
+                          <Badge className={`${getStatusColor(check.status)} bg-opacity-20 border border-opacity-50`}>
+                            {check.status.toUpperCase()}
+                          </Badge>
+                        </div>
+                        <p className="text-slate-300 mb-1">{check.message}</p>
+                        {check.details && <p className="text-xs text-slate-500">{check.details}</p>}
+                        <p className="text-xs text-slate-600 mt-2">
+                          Checked at: {check.timestamp.toLocaleTimeString()}
+                        </p>
+                      </div>
+                    ))
+                  ) : (
+                    <div className="text-center py-8">
+                      <RefreshCw className="h-8 w-8 text-slate-500 animate-spin mx-auto mb-4" />
+                      <p className="text-slate-400">Running environment checks...</p>
+                    </div>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="performance">
+            <Card className="bg-wolf-card wolf-border">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-3">
+                  <Zap className="h-5 w-5 text-teal" />
+                  Performance Diagnostics
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-4">
+                  {performanceChecks.length > 0 ? (
+                    performanceChecks.map((check, index) => (
+                      <div key={index} className="bg-slate-800/50 rounded-lg p-4">
+                        <div className="flex items-center justify-between mb-2">
+                          <div className="flex items-center gap-3">
+                            {getStatusIcon(check.status)}
+                            <span className="font-semibold text-white">{check.name}</span>
+                          </div>
+                          <Badge className={`${getStatusColor(check.status)} bg-opacity-20 border border-opacity-50`}>
+                            {check.status.toUpperCase()}
+                          </Badge>
+                        </div>
+                        <p className="text-slate-300 mb-1">{check.message}</p>
+                        {check.details && <p className="text-xs text-slate-500">{check.details}</p>}
+                        <p className="text-xs text-slate-600 mt-2">
+                          Checked at: {check.timestamp.toLocaleTimeString()}
+                        </p>
+                      </div>
+                    ))
+                  ) : (
+                    <div className="text-center py-8">
+                      <RefreshCw className="h-8 w-8 text-slate-500 animate-spin mx-auto mb-4" />
+                      <p className="text-slate-400">Running performance checks...</p>
+                    </div>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
+          </TabsContent>
+
           <TabsContent value="logs">
             <Card className="bg-wolf-card wolf-border">
               <CardHeader>
@@ -849,12 +1107,40 @@ export default function DebugPage() {
                     </div>
                   ))}
 
+                  {supabaseChecks.map((check, i) => (
+                    <div key={`supabase-${i}`} className={getStatusColor(check.status)}>
+                      [{check.timestamp.toISOString()}] Supabase: {check.name} - {check.status.toUpperCase()} -{" "}
+                      {check.message}
+                    </div>
+                  ))}
+
+                  {envChecks.map((check, i) => (
+                    <div key={`env-${i}`} className={getStatusColor(check.status)}>
+                      [{check.timestamp.toISOString()}] Environment: {check.name} - {check.status.toUpperCase()} -{" "}
+                      {check.message}
+                    </div>
+                  ))}
+
+                  {performanceChecks.map((check, i) => (
+                    <div key={`performance-${i}`} className={getStatusColor(check.status)}>
+                      [{check.timestamp.toISOString()}] Performance: {check.name} - {check.status.toUpperCase()} -{" "}
+                      {check.message}
+                    </div>
+                  ))}
+
                   <div className="text-blue-400">[{new Date().toISOString()}] System: Diagnostics complete</div>
                 </div>
 
                 <div className="mt-4 flex justify-between items-center">
                   <div className="text-xs text-slate-500">
-                    Log entries: {systemChecks.length + apiChecks.length + cssChecks.length + dataChecks.length}
+                    Log entries:{" "}
+                    {systemChecks.length +
+                      apiChecks.length +
+                      cssChecks.length +
+                      dataChecks.length +
+                      supabaseChecks.length +
+                      envChecks.length +
+                      performanceChecks.length}
                   </div>
                   <Button variant="outline" className="text-teal border-teal/30 hover:bg-teal/10">
                     <FileText className="h-4 w-4 mr-2" />
