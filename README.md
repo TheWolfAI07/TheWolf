@@ -28,3 +28,10 @@ Continue building your app on:
 2. Deploy your chats from the v0 interface
 3. Changes are automatically pushed to this repository
 4. Vercel deploys the latest version from this repository
+
+## Local Development
+
+1. Copy `.env.example` to `.env.local` in the project root.
+2. Fill in the required values such as `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`, and your `NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID`.
+3. Run `pnpm install` to install dependencies.
+4. Start the development server with `pnpm dev`.
