@@ -1,4 +1,5 @@
 import { ethers } from "ethers"
+import EthereumProvider from "@walletconnect/ethereum-provider"
 
 export interface WalletConnection {
   address: string
@@ -26,6 +27,7 @@ export class WalletConnector {
   private connection: WalletConnection | null = null
   private listeners: ((connection: WalletConnection | null) => void)[] = []
   private isConnecting = false
+  private externalProvider: any = null
 
   static getInstance(): WalletConnector {
     if (!WalletConnector.instance) {
@@ -49,6 +51,7 @@ export class WalletConnector {
 
     try {
       this.isConnecting = true
+      this.externalProvider = window.ethereum
 
       // Check if already connected
       const accounts = await window.ethereum.request({
@@ -95,7 +98,7 @@ export class WalletConnector {
       }
 
       // Set up event listeners
-      this.setupEventListeners()
+      this.setupEventListeners(this.externalProvider)
 
       this.notifyListeners()
       return this.connection
@@ -117,8 +120,8 @@ export class WalletConnector {
     }
   }
 
-  private setupEventListeners(): void {
-    if (!window.ethereum) return
+  private setupEventListeners(providerSource: any = window.ethereum): void {
+    if (!providerSource?.on) return
 
     // Remove existing listeners to prevent duplicates
     this.removeEventListeners()
@@ -145,14 +148,15 @@ export class WalletConnector {
       this.disconnect()
     }
 
-    window.ethereum.on("accountsChanged", handleAccountsChanged)
-    window.ethereum.on("chainChanged", handleChainChanged)
-    window.ethereum.on("disconnect", handleDisconnect)
+    providerSource.on("accountsChanged", handleAccountsChanged)
+    providerSource.on("chainChanged", handleChainChanged)
+    providerSource.on("disconnect", handleDisconnect)
 
     // Store references for cleanup
     this.connection = {
       ...this.connection!,
       _listeners: {
+        provider: providerSource,
         accountsChanged: handleAccountsChanged,
         chainChanged: handleChainChanged,
         disconnect: handleDisconnect,
@@ -161,33 +165,115 @@ export class WalletConnector {
   }
 
   private removeEventListeners(): void {
-    if (!window.ethereum || !this.connection) return
+    if (!this.connection) return
 
     const listeners = (this.connection as any)._listeners
-    if (listeners) {
-      window.ethereum.removeListener("accountsChanged", listeners.accountsChanged)
-      window.ethereum.removeListener("chainChanged", listeners.chainChanged)
-      window.ethereum.removeListener("disconnect", listeners.disconnect)
+    if (!listeners) return
+
+    const provider = listeners.provider || window.ethereum
+    if (provider?.removeListener) {
+      if (listeners.accountsChanged) {
+        provider.removeListener("accountsChanged", listeners.accountsChanged)
+      }
+      if (listeners.chainChanged) {
+        provider.removeListener("chainChanged", listeners.chainChanged)
+      }
+      if (listeners.disconnect) {
+        provider.removeListener("disconnect", listeners.disconnect)
+      }
     }
   }
 
   async connectWalletConnect(): Promise<WalletConnection> {
-    // For now, fallback to MetaMask
-    // TODO: Implement actual WalletConnect v2
-    return this.connectMetaMask()
+    if (this.isConnecting) {
+      throw new Error("Connection already in progress")
+    }
+
+    if (typeof window === "undefined") {
+      throw new Error("Window not available - running on server")
+    }
+
+    const projectId = process.env.NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID
+    if (!projectId) {
+      throw new Error("WalletConnect project ID not configured")
+    }
+
+    try {
+      this.isConnecting = true
+
+      const wcProvider = await EthereumProvider.init({
+        projectId,
+        chains: [1],
+        showQrModal: true,
+      })
+
+      await wcProvider.enable()
+
+      this.externalProvider = wcProvider
+
+      const provider = new ethers.BrowserProvider(wcProvider as any)
+      await provider.ready
+
+      const signer = await provider.getSigner()
+      const address = await signer.getAddress()
+      const network = await provider.getNetwork()
+      const balance = await provider.getBalance(address)
+
+      let ensName: string | undefined
+      try {
+        if (Number(network.chainId) === 1) {
+          ensName = (await provider.lookupAddress(address)) || undefined
+        }
+      } catch (error) {
+        console.warn("Failed to resolve ENS name:", error)
+      }
+
+      this.connection = {
+        address,
+        provider,
+        signer,
+        chainId: Number(network.chainId),
+        balance: ethers.formatEther(balance),
+        ensName,
+      }
+
+      this.setupEventListeners(wcProvider)
+
+      this.notifyListeners()
+      return this.connection
+    } catch (error: any) {
+      console.error("WalletConnect connection error:", error)
+      if (error.code === 4001) {
+        throw new Error("Connection rejected by user")
+      }
+      throw new Error(`Failed to connect WalletConnect: ${error.message}`)
+    } finally {
+      this.isConnecting = false
+    }
   }
 
   async disconnect(): Promise<void> {
+    if ((this.connection as any)?._listeners?.provider?.disconnect) {
+      try {
+        await (this.connection as any)._listeners.provider.disconnect()
+      } catch (err) {
+        console.warn("Wallet disconnect error:", err)
+      }
+    }
     this.removeEventListeners()
     this.connection = null
+    this.externalProvider = null
     this.notifyListeners()
   }
 
   private async refreshConnection(): Promise<void> {
-    if (!this.connection || !window.ethereum) return
+    if (!this.connection) return
+
+    const providerSource = (this.connection as any)._listeners?.provider || window.ethereum
+    if (!providerSource) return
 
     try {
-      const provider = new ethers.BrowserProvider(window.ethereum)
+      const provider = new ethers.BrowserProvider(providerSource as any)
       const signer = await provider.getSigner()
       const address = await signer.getAddress()
       const network = await provider.getNetwork()
